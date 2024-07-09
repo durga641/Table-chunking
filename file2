@@ -1,0 +1,64 @@
+from bs4 import BeautifulSoup
+
+# Sample HTML code with nested tables
+html_code = """
+<html>
+<head><title>Nested Table Example</title></head>
+<body>
+    <table>
+        <tr><th>Outer Header1</th><th>Outer Header2</th></tr>
+        <tr>
+            <td>
+                <table>
+                    <tr><th>Inner Header1</th><th>Inner Header2</th></tr>
+                    <tr><td>inner value1</td><td>inner value2</td></tr>
+                    <tr><td>inner value3</td><td>inner value4</td></tr>
+                </table>
+            </td>
+            <td>outer value1</td>
+        </tr>
+        <tr>
+            <td>outer value2</td>
+            <td>outer value3</td>
+        </tr>
+    </table>
+</body>
+</html>
+"""
+
+# Parse the HTML code
+soup = BeautifulSoup(html_code, 'lxml')
+
+# Function to create HTML chunks from table rows
+def create_html_chunks(tables):
+    chunks = []
+    for table in tables:
+        rows = table.find_all('tr')
+        for row in rows:
+            if row.find_all(['th', 'td']):  # Ensure the row contains either 'th' or 'td'
+                chunk = "<div class='record'>\n"
+                cells = row.find_all(['th', 'td'])
+                for cell in cells:
+                    # Check if cell contains a nested table
+                    nested_table = cell.find('table')
+                    if nested_table:
+                        nested_rows = nested_table.find_all('tr')
+                        for nested_row in nested_rows:
+                            nested_cells = nested_row.find_all(['th', 'td'])
+                            for nested_cell in nested_cells:
+                                chunk += f"  <p>{nested_cell.text}</p>\n"
+                    else:
+                        chunk += f"  <p>{cell.text}</p>\n"
+                chunk += "</div>\n"
+                chunks.append(chunk)
+    return chunks
+
+# Find the outermost table
+outer_table = soup.find('table')
+
+# Create HTML chunks from the outer table
+html_chunks = create_html_chunks([outer_table])
+
+# Print the HTML chunks
+for chunk in html_chunks:
+    print(chunk)
