@@ -1,48 +1,33 @@
-soup = BeautifulSoup(html_content, 'html.parser')
-
-# Find the table
-table = soup.find('table')
-
-# Iterate over each row in the table
-for row in table.find_all('tr'):
-    cells = row.find_all(['td', 'th'])
-    text_chunks = [cell.get_text(strip=True) for cell in cells]
-    print(text_chunks)
-
-
 from bs4 import BeautifulSoup
-from docx import Document
 
-def html_to_docx(html_content, output_file):
-    # Parse HTML content using BeautifulSoup with lxml parser
-    soup = BeautifulSoup(html_content, 'lxml')
+def extract_table_rows(html):
+    # Parse the HTML content using BeautifulSoup
+    soup = BeautifulSoup(html, 'html.parser')
+    
+    # Find the table
+    table = soup.find('table')
+    
+    # Initialize a list to store the rows
+    table_rows = []
 
-    # Create a new Document
-    doc = Document()
+    # Function to extract text from a cell, handling nested tables
+    def extract_cell_text(cell):
+        nested_table = cell.find('table')
+        if nested_table:
+            return " ".join(extract_table_rows(str(nested_table))[0])
+        else:
+            return cell.get_text(strip=True)
 
-    # Add content to the document
-    for element in soup.body.children:
-        if element.name == 'h1':
-            doc.add_heading(element.get_text(), level=1)
-        elif element.name == 'h2':
-            doc.add_heading(element.get_text(), level=2)
-        elif element.name == 'p':
-            doc.add_paragraph(element.get_text())
-        elif element.name == 'table':
-            table = doc.add_table(rows=0, cols=0)
-            for row in element.find_all('tr'):
-                cells = row.find_all(['th', 'td'])
-                if len(table.columns) == 0:
-                    table.add_column(width=0)
-                    for _ in cells[1:]:
-                        table.add_column(width=0)
-                table_row = table.add_row().cells
-                for idx, cell in enumerate(cells):
-                    table_row[idx].text = cell.get_text()
-
-    # Save the document
-    doc.save(output_file)
-    print(f"Document saved as {output_file}")
+    # Iterate over each row in the table
+    for row in table.find_all('tr'):
+        # Find all cells in the row
+        cells = row.find_all(['th', 'td'])
+        # Extract the text from each cell and store it in a list
+        row_data = [extract_cell_text(cell) for cell in cells]
+        # Append the row data to the table_rows list
+        table_rows.append(row_data)
+    
+    return table_rows
 
 # Example usage
 html_content = """
@@ -51,16 +36,10 @@ html_content = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sample SOP</title>
+    <title>Sample Table</title>
 </head>
 <body>
-    <h1>Standard Operating Procedure</h1>
-    <p>This is a sample paragraph in the SOP document.</p>
-    <h2>Section 1</h2>
-    <p>Details of section 1.</p>
-    <h2>Section 2</h2>
-    <p>Details of section 2.</p>
-    <table>
+    <table border="1">
         <tr>
             <th>Header 1</th>
             <th>Header 2</th>
@@ -68,7 +47,18 @@ html_content = """
         </tr>
         <tr>
             <td>Row 1, Cell 1</td>
-            <td>Row 1, Cell 2</td>
+            <td>
+                <table border="1">
+                    <tr>
+                        <td>Nested Row 1, Cell 1</td>
+                        <td>Nested Row 1, Cell 2</td>
+                    </tr>
+                    <tr>
+                        <td>Nested Row 2, Cell 1</td>
+                        <td>Nested Row 2, Cell 2</td>
+                    </tr>
+                </table>
+            </td>
             <td>Row 1, Cell 3</td>
         </tr>
         <tr>
@@ -78,4 +68,12 @@ html_content = """
         </tr>
     </table>
 </body>
-</html
+</html>
+"""
+
+# Extract the rows from the table
+rows = extract_table_rows(html_content)
+
+# Print the extracted rows
+for row in rows:
+    print(row)
