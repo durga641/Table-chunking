@@ -10,11 +10,41 @@ for row in table.find_all('tr'):
     print(text_chunks)
 
 
-
 from bs4 import BeautifulSoup
 from docx import Document
 
-# Sample HTML content
+def html_to_docx(html_content, output_file):
+    # Parse HTML content using BeautifulSoup with lxml parser
+    soup = BeautifulSoup(html_content, 'lxml')
+
+    # Create a new Document
+    doc = Document()
+
+    # Add content to the document
+    for element in soup.body.children:
+        if element.name == 'h1':
+            doc.add_heading(element.get_text(), level=1)
+        elif element.name == 'h2':
+            doc.add_heading(element.get_text(), level=2)
+        elif element.name == 'p':
+            doc.add_paragraph(element.get_text())
+        elif element.name == 'table':
+            table = doc.add_table(rows=0, cols=0)
+            for row in element.find_all('tr'):
+                cells = row.find_all(['th', 'td'])
+                if len(table.columns) == 0:
+                    table.add_column(width=0)
+                    for _ in cells[1:]:
+                        table.add_column(width=0)
+                table_row = table.add_row().cells
+                for idx, cell in enumerate(cells):
+                    table_row[idx].text = cell.get_text()
+
+    # Save the document
+    doc.save(output_file)
+    print(f"Document saved as {output_file}")
+
+# Example usage
 html_content = """
 <!DOCTYPE html>
 <html lang="en">
@@ -48,35 +78,4 @@ html_content = """
         </tr>
     </table>
 </body>
-</html>
-"""
-
-# Parse HTML content using BeautifulSoup
-soup = BeautifulSoup(html_content, 'html.parser')
-
-# Create a new Document
-doc = Document()
-
-# Add content to the document
-for element in soup.body.children:
-    if element.name == 'h1':
-        doc.add_heading(element.get_text(), level=1)
-    elif element.name == 'h2':
-        doc.add_heading(element.get_text(), level=2)
-    elif element.name == 'p':
-        doc.add_paragraph(element.get_text())
-    elif element.name == 'table':
-        table = doc.add_table(rows=0, cols=0)
-        for row in element.find_all('tr'):
-            cells = row.find_all(['th', 'td'])
-            if len(table.columns) == 0:
-                table.add_column(width=0)
-                for _ in cells[1:]:
-                    table.add_column(width=0)
-            table_row = table.add_row().cells
-            for idx, cell in enumerate(cells):
-                table_row[idx].text = cell.get_text()
-
-# Save the document
-doc.save('sop_with_tables.docx')
-print("Document saved as sop_with_tables.docx")
+</html
