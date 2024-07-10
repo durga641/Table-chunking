@@ -8,3 +8,53 @@ for row in table.find_all('tr'):
     cells = row.find_all(['td', 'th'])
     text_chunks = [cell.get_text(strip=True) for cell in cells]
     print(text_chunks)
+
+
+
+from bs4 import BeautifulSoup
+from docx import Document
+
+# Sample HTML content
+html_content = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sample SOP</title>
+</head>
+<body>
+    <h1>Standard Operating Procedure</h1>
+    <p>This is a sample paragraph in the SOP document.</p>
+    <h2>Section 1</h2>
+    <p>Details of section 1.</p>
+    <h2>Section 2</h2>
+    <p>Details of section 2.</p>
+</body>
+</html>
+"""
+
+# Parse HTML content using BeautifulSoup
+soup = BeautifulSoup(html_content, 'html.parser')
+
+# Extract text content (adjust based on the structure of your HTML)
+text_content = []
+for element in soup.find_all(['h1', 'h2', 'p']):
+    text_content.append((element.name, element.get_text()))
+
+# Create a new Document
+doc = Document()
+
+# Add the extracted content to the document
+for tag, text in text_content:
+    if tag == 'h1':
+        doc.add_heading(text, level=1)
+    elif tag == 'h2':
+        doc.add_heading(text, level=2)
+    else:
+        doc.add_paragraph(text)
+
+# Save the document
+doc.save('sop.docx')
+print("Document saved as sop.docx")
+
