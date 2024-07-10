@@ -30,6 +30,23 @@ html_content = """
     <p>Details of section 1.</p>
     <h2>Section 2</h2>
     <p>Details of section 2.</p>
+    <table>
+        <tr>
+            <th>Header 1</th>
+            <th>Header 2</th>
+            <th>Header 3</th>
+        </tr>
+        <tr>
+            <td>Row 1, Cell 1</td>
+            <td>Row 1, Cell 2</td>
+            <td>Row 1, Cell 3</td>
+        </tr>
+        <tr>
+            <td>Row 2, Cell 1</td>
+            <td>Row 2, Cell 2</td>
+            <td>Row 2, Cell 3</td>
+        </tr>
+    </table>
 </body>
 </html>
 """
@@ -37,24 +54,29 @@ html_content = """
 # Parse HTML content using BeautifulSoup
 soup = BeautifulSoup(html_content, 'html.parser')
 
-# Extract text content (adjust based on the structure of your HTML)
-text_content = []
-for element in soup.find_all(['h1', 'h2', 'p']):
-    text_content.append((element.name, element.get_text()))
-
 # Create a new Document
 doc = Document()
 
-# Add the extracted content to the document
-for tag, text in text_content:
-    if tag == 'h1':
-        doc.add_heading(text, level=1)
-    elif tag == 'h2':
-        doc.add_heading(text, level=2)
-    else:
-        doc.add_paragraph(text)
+# Add content to the document
+for element in soup.body.children:
+    if element.name == 'h1':
+        doc.add_heading(element.get_text(), level=1)
+    elif element.name == 'h2':
+        doc.add_heading(element.get_text(), level=2)
+    elif element.name == 'p':
+        doc.add_paragraph(element.get_text())
+    elif element.name == 'table':
+        table = doc.add_table(rows=0, cols=0)
+        for row in element.find_all('tr'):
+            cells = row.find_all(['th', 'td'])
+            if len(table.columns) == 0:
+                table.add_column(width=0)
+                for _ in cells[1:]:
+                    table.add_column(width=0)
+            table_row = table.add_row().cells
+            for idx, cell in enumerate(cells):
+                table_row[idx].text = cell.get_text()
 
 # Save the document
-doc.save('sop.docx')
-print("Document saved as sop.docx")
-
+doc.save('sop_with_tables.docx')
+print("Document saved as sop_with_tables.docx")
