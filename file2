@@ -1,33 +1,29 @@
 from bs4 import BeautifulSoup
 
-def extract_table_rows(html):
+def extract_table_rows_with_tags(html):
     # Parse the HTML content using BeautifulSoup
     soup = BeautifulSoup(html, 'html.parser')
     
-    # Find the table
-    table = soup.find('table')
-    
-    # Initialize a list to store the rows
-    table_rows = []
+    # Function to recursively extract rows from tables and identify their origin
+    def extract_rows(table, origin_tag):
+        rows = []
+        for row in table.find_all('tr', recursive=False):
+            cells = row.find_all(['th', 'td'], recursive=False)
+            row_data = [(cell.get_text(strip=True), origin_tag) for cell in cells]
+            rows.append(row_data)
+            for cell in cells:
+                nested_table = cell.find('table')
+                if nested_table:
+                    rows.extend(extract_rows(nested_table, origin_tag + 1))
+        return rows
 
-    # Function to extract text from a cell, handling nested tables
-    def extract_cell_text(cell):
-        nested_table = cell.find('table')
-        if nested_table:
-            return " ".join(extract_table_rows(str(nested_table))[0])
-        else:
-            return cell.get_text(strip=True)
-
-    # Iterate over each row in the table
-    for row in table.find_all('tr'):
-        # Find all cells in the row
-        cells = row.find_all(['th', 'td'])
-        # Extract the text from each cell and store it in a list
-        row_data = [extract_cell_text(cell) for cell in cells]
-        # Append the row data to the table_rows list
-        table_rows.append(row_data)
+    # Find the main table
+    main_table = soup.find('table')
     
-    return table_rows
+    # Extract rows from the main table
+    all_rows = extract_rows(main_table, 0)
+    
+    return all_rows
 
 # Example usage
 html_content = """
@@ -71,9 +67,9 @@ html_content = """
 </html>
 """
 
-# Extract the rows from the table
-rows = extract_table_rows(html_content)
+# Extract the rows from the table with tags
+rows_with_tags = extract_table_rows_with_tags(html_content)
 
-# Print the extracted rows
-for row in rows:
+# Print the extracted rows with their tags
+for row in rows_with_tags:
     print(row)
