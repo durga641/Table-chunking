@@ -1,75 +1,29 @@
-from bs4 import BeautifulSoup
-
-def extract_table_rows_with_tags(html):
-    # Parse the HTML content using BeautifulSoup
-    soup = BeautifulSoup(html, 'html.parser')
+def remove_substrings(strings):
+    # Sort strings by length in descending order
+    strings.sort(key=len, reverse=True)
     
-    # Function to recursively extract rows from tables and identify their origin
-    def extract_rows(table, origin_tag):
-        rows = []
-        for row in table.find_all('tr', recursive=False):
-            cells = row.find_all(['th', 'td'], recursive=False)
-            row_data = [(cell.get_text(strip=True), origin_tag) for cell in cells]
-            rows.append(row_data)
-            for cell in cells:
-                nested_table = cell.find('table')
-                if nested_table:
-                    rows.extend(extract_rows(nested_table, origin_tag + 1))
-        return rows
-
-    # Find the main table
-    main_table = soup.find('table')
+    # Initialize an empty list to store the result
+    result = []
     
-    # Extract rows from the main table
-    all_rows = extract_rows(main_table, 0)
+    # Iterate through the sorted list
+    for s in strings:
+        # Check if the string is a substring of any string in the result list
+        if not any(s in res for res in result):
+            # If not, add it to the result list
+            result.append(s)
     
-    return all_rows
+    return result
 
 # Example usage
-html_content = """
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sample Table</title>
-</head>
-<body>
-    <table border="1">
-        <tr>
-            <th>Header 1</th>
-            <th>Header 2</th>
-            <th>Header 3</th>
-        </tr>
-        <tr>
-            <td>Row 1, Cell 1</td>
-            <td>
-                <table border="1">
-                    <tr>
-                        <td>Nested Row 1, Cell 1</td>
-                        <td>Nested Row 1, Cell 2</td>
-                    </tr>
-                    <tr>
-                        <td>Nested Row 2, Cell 1</td>
-                        <td>Nested Row 2, Cell 2</td>
-                    </tr>
-                </table>
-            </td>
-            <td>Row 1, Cell 3</td>
-        </tr>
-        <tr>
-            <td>Row 2, Cell 1</td>
-            <td>Row 2, Cell 2</td>
-            <td>Row 2, Cell 3</td>
-        </tr>
-    </table>
-</body>
-</html>
-"""
+strings = [
+    "apple",
+    "app",
+    "application",
+    "banana",
+    "ban",
+    "band",
+    "bandana"
+]
 
-# Extract the rows from the table with tags
-rows_with_tags = extract_table_rows_with_tags(html_content)
-
-# Print the extracted rows with their tags
-for row in rows_with_tags:
-    print(row)
+filtered_strings = remove_substrings(strings)
+print(filtered_strings)
