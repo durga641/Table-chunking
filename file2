@@ -41,3 +41,50 @@ text = "This text contains ranges like 10-20 and 30-35. Another example is 50-55
 range_codes = identify_and_generate_range_codes(text)
 print(range_codes)
 
+import requests
+import json
+
+# Azure Cognitive Search details
+service_name = 'your-search-service-name'
+api_key = 'your-api-key'
+index_name = 'range-index'
+endpoint = f'https://{service_name}.search.windows.net'
+
+# Headers for the requests
+headers = {
+    'Content-Type': 'application/json',
+    'api-key': api_key
+}
+
+# Define the index schema with semantic configuration
+index_schema = {
+    "name": index_name,
+    "fields": [
+        {"name": "id", "type": "Edm.String", "key": True, "filterable": True},
+        {"name": "content", "type": "Edm.String", "searchable": True},
+        {"name": "metadata", "type": "Edm.String", "searchable": True}
+    ],
+    "semantic": {
+        "configurations": [
+            {
+                "name": "default",
+                "prioritizedFields": {
+                    "titleField": {"fieldName": "metadata"},
+                    "contentFields": [{"fieldName": "content"}]
+                }
+            }
+        ]
+    }
+}
+
+# Create or update the index
+response = requests.put(f'{endpoint}/indexes/{index_name}?api-version=2021-04-30-Preview', headers=headers, json=index_schema)
+
+if response.status_code == 201:
+    print("Index created successfully.")
+elif response.status_code == 204:
+    print("Index updated successfully.")
+else:
+    print(f"Error creating/updating index: {response.status_code}, {response.text}")
+
+
