@@ -22,7 +22,8 @@ import re
 def identify_and_generate_range_codes(text):
     # Define the regex pattern for numerical ranges like 10-20
     pattern = re.compile(r'(\d+)-(\d+)')
-    
+    pattern = re.compile(r'\b(\d{2,5})-(\d{2,5})\b')
+
     # Find all matches in the text
     matches = pattern.findall(text)
     
