@@ -15,3 +15,29 @@ df = pd.DataFrame(flattened_data, columns=['Key', 'Chunk'])
 
 # Display the DataFrame
 print(df)
+
+
+import re
+
+def identify_and_generate_range_codes(text):
+    # Define the regex pattern for numerical ranges like 10-20
+    pattern = re.compile(r'(\d+)-(\d+)')
+    
+    # Find all matches in the text
+    matches = pattern.findall(text)
+    
+    # Create a list to store the ranges
+    all_ranges = []
+    
+    # Generate the list of numbers for each range
+    for start, end in matches:
+        start, end = int(start), int(end)
+        all_ranges.extend(list(range(start, end + 1)))
+    
+    return all_ranges
+
+# Example usage
+text = "This text contains ranges like 10-20 and 30-35. Another example is 50-55."
+range_codes = identify_and_generate_range_codes(text)
+print(range_codes)
+
