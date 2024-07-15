@@ -1,29 +1,17 @@
-def remove_substrings(strings):
-    # Sort strings by length in descending order
-    strings.sort(key=len, reverse=True)
-    
-    # Initialize an empty list to store the result
-    result = []
-    
-    # Iterate through the sorted list
-    for s in strings:
-        # Check if the string is a substring of any string in the result list
-        if not any(s in res for res in result):
-            # If not, add it to the result list
-            result.append(s)
-    
-    return result
+import pandas as pd
 
-# Example usage
-strings = [
-    "apple",
-    "app",
-    "application",
-    "banana",
-    "ban",
-    "band",
-    "bandana"
-]
+# Sample dictionary
+data = {
+    'code1': ['chunk1', 'chunk2', 'chunk3'],
+    'code2': ['chunk4', 'chunk5'],
+    'code3': ['chunk6', 'chunk7', 'chunk8', 'chunk9']
+}
 
-filtered_strings = remove_substrings(strings)
-print(filtered_strings)
+# Flatten the dictionary
+flattened_data = [(key, chunk) for key, chunks in data.items() for chunk in chunks]
+
+# Create a DataFrame
+df = pd.DataFrame(flattened_data, columns=['Key', 'Chunk'])
+
+# Display the DataFrame
+print(df)
