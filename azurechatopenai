@@ -1,21 +1,21 @@
-import openai
+from langchain_openai import AzureChatOpenAI
 
 # Set your API key and endpoint
-openai.api_key = 'your-api-key-here'
-openai.api_base = 'https://your-endpoint-here.openai.azure.com/'  # Your Azure OpenAI endpoint
+api_key = 'your-api-key-here'
+api_base = 'https://your-endpoint-here.openai.azure.com/'  # Your Azure OpenAI endpoint
+engine = 'gpt-4'  # or the specific model name you are using
 
-# Define the engine you want to use
-engine = 'gpt-35-turbo'  # or any other model available in your Azure OpenAI setup
+# Initialize the AzureChatOpenAI client
+azure_chat = AzureChatOpenAI(api_key=api_key, api_base=api_base, engine=engine)
 
-# Create a simple prompt
-prompt = "What are the benefits of using Azure OpenAI Service?"
+# Create a simple chat-based prompt
+messages = [
+    {"role": "system", "content": "You are a helpful assistant."},
+    {"role": "user", "content": "What are the benefits of using Azure OpenAI Service?"}
+]
 
-# Make a request to the OpenAI API
-response = openai.Completion.create(
-    engine=engine,
-    prompt=prompt,
-    max_tokens=100  # Adjust the max_tokens based on your needs
-)
+# Make a request to the OpenAI API for a chat completion
+response = azure_chat.chat(messages=messages, max_tokens=100)
 
 # Print the response
-print(response.choices[0].text.strip())
+print(response['choices'][0]['message']['content'].strip())
