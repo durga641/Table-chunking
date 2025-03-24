@@ -1,4 +1,8 @@
-import openai
+# Program to print even numbers from 0 to 20
+
+for number in range(21):  # Loop from 0 to 20
+    if number % 2 == 0:  # Check if the number is even
+        print(number)import openai
 from langchain.llms import OpenAI
 
 # Set up your OpenAI API key
