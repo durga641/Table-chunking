@@ -19,3 +19,12 @@ response = llm(prompt)
 
 # Print the result
 print(response)
+
+WITH cte AS (
+    SELECT *, ROW_NUMBER() OVER (PARTITION BY id ORDER BY id) AS row_num
+    FROM employees
+)
+UPDATE employees
+SET salary = 85000
+WHERE id = 101
+  AND EXISTS (SELECT 1 FROM cte WHERE employees.id = cte.id AND cte.row_num = 1);
