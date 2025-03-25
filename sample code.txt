@@ -48,38 +48,45 @@ SINGLE = TRUE;  -- Ensures a single file
 '''
 
 
-
 import boto3
+from urllib.parse import urlparse
 
-def clean_old_files(base_path, db_nm, sch_nm, tab_nm):
+def clean_old_files(base_path, file_prefix):
     """
-    Deletes older files in an S3 bucket path, keeping only the latest 4.
-    
+    Searches for files with the given prefix in the specified S3 path.
+    Retains only the latest 4 files, deleting older ones.
+
     Args:
-    - base_path (str): The S3 bucket name or base path.
-    - db_nm (str): Database name.
-    - sch_nm (str): Schema name.
-    - tab_nm (str): Table name.
+    - base_path (str): The full S3 URL (e.g., s3://bucket-name/folder/subfolder/).
+    - file_prefix (str): The prefix of the files to search for (e.g., "backup_").
     """
     s3 = boto3.client('s3')
 
-    # Extract bucket name and prefix (folder path in S3)
-    bucket_name = base_path.split('/')[2]  # Extract bucket name from s3://bucket-name
-    prefix = f"{db_nm}/{sch_nm}/{tab_nm}/"
+    # Parse the S3 URL
+    parsed_url = urlparse(base_path)
+    bucket_name = parsed_url.netloc  # Extracts the bucket name
+    base_prefix = parsed_url.path.lstrip('/')  # Extracts the prefix without leading "/"
 
     # List objects in the specified prefix
-    response = s3.list_objects_v2(Bucket=bucket_name, Prefix=prefix)
+    response = s3.list_objects_v2(Bucket=bucket_name, Prefix=base_prefix)
 
     if 'Contents' not in response:
-        print("No files found in the specified S3 path.")
+        print(f"No files found in: s3://{bucket_name}/{base_prefix}")
+        return
+
+    # Filter files that match the given prefix
+    matching_files = [obj for obj in response['Contents'] if obj['Key'].startswith(f"{base_prefix}/{file_prefix}")]
+
+    if not matching_files:
+        print(f"No files found with prefix '{file_prefix}' in: s3://{bucket_name}/{base_prefix}")
         return
 
     # Sort files by LastModified (newest first)
-    files = sorted(response['Contents'], key=lambda obj: obj['LastModified'], reverse=True)
+    matching_files.sort(key=lambda obj: obj['LastModified'], reverse=True)
 
-    # If more than 5 files, keep the latest 4 and delete the rest
-    if len(files) > 5:
-        files_to_delete = files[4:]  # Keep the latest 4, delete the rest
+    # If more than 4 files, delete older ones
+    if len(matching_files) > 4:
+        files_to_delete = matching_files[4:]  # Keep the latest 4, delete the rest
 
         for file in files_to_delete:
             s3.delete_object(Bucket=bucket_name, Key=file['Key'])
@@ -88,9 +95,7 @@ def clean_old_files(base_path, db_nm, sch_nm, tab_nm):
         print("No action required. Files are 4 or less.")
 
 # Example Usage
-base_path = "s3://your-s3-bucket-name"
-db_nm = "database"
-sch_nm = "schema"
-tab_nm = "table"
+base_path = "s3://your-s3-bucket-name/folder/subfolder"  # Base path including directories
+file_prefix = "backup_"  # Only consider files starting with "backup_"
 
-clean_old_files(base_path, db_nm, sch_nm, tab_nm)
+clean_old_files(base_path, file_prefix)
