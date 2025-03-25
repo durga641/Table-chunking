@@ -49,27 +49,46 @@ SINGLE = TRUE;  -- Ensures a single file
 
 
 
-import os
-import glob
+import boto3
 
 def clean_old_files(base_path, db_nm, sch_nm, tab_nm):
-    # Construct the file path pattern
-    file_pattern = os.path.join(base_path, f"{db_nm}/{sch_nm}/{tab_nm}/{tab_nm}*")
+    """
+    Deletes older files in an S3 bucket path, keeping only the latest 4.
     
-    # Get the list of matching files sorted by modification time (newest first)
-    files = sorted(glob.glob(file_pattern), key=os.path.getmtime, reverse=True)
-    
-    # If there are more than 5 files, keep the latest 4 and delete the rest
+    Args:
+    - base_path (str): The S3 bucket name or base path.
+    - db_nm (str): Database name.
+    - sch_nm (str): Schema name.
+    - tab_nm (str): Table name.
+    """
+    s3 = boto3.client('s3')
+
+    # Extract bucket name and prefix (folder path in S3)
+    bucket_name = base_path.split('/')[2]  # Extract bucket name from s3://bucket-name
+    prefix = f"{db_nm}/{sch_nm}/{tab_nm}/"
+
+    # List objects in the specified prefix
+    response = s3.list_objects_v2(Bucket=bucket_name, Prefix=prefix)
+
+    if 'Contents' not in response:
+        print("No files found in the specified S3 path.")
+        return
+
+    # Sort files by LastModified (newest first)
+    files = sorted(response['Contents'], key=lambda obj: obj['LastModified'], reverse=True)
+
+    # If more than 5 files, keep the latest 4 and delete the rest
     if len(files) > 5:
         files_to_delete = files[4:]  # Keep the latest 4, delete the rest
+
         for file in files_to_delete:
-            os.remove(file)
-            print(f"Deleted: {file}")
+            s3.delete_object(Bucket=bucket_name, Key=file['Key'])
+            print(f"Deleted: s3://{bucket_name}/{file['Key']}")
     else:
         print("No action required. Files are 4 or less.")
 
 # Example Usage
-base_path = "/your/s3/mount/path"  # Change this to the actual path where files are stored
+base_path = "s3://your-s3-bucket-name"
 db_nm = "database"
 sch_nm = "schema"
 tab_nm = "table"
