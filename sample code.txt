@@ -1,240 +1,34 @@
+use role sysadmin;
 
-hi
-ChatGPT
-Hello, Venkat! How can I assist you today?
+-- External Stage
+CREATE or replace STAGE SYS_UTILS.SOURCE.TABLE_BACKUP_STAGE 
+URL = 's3://datæng-snowflake-prd-ascap/snowflake/' 
+CREDENTIALS = (AWS_KEY_ID = '***************' AWS_SECRET_KEY = '*************');
 
-i have an html file availalbe as Json object
-ChatGPT
-Great! If you have an HTML file available as a JSON object, you can share the details with me. I can help you parse it, extract information, or perform any other operations you need. Please provide the JSON object or specify what you need help with.
+-- FileFormat stage
+CREATE OR REPLACE FILE FORMAT SYS_UTILS.SOURCE.TABLE_BACKUP_FF 
+TYPE = 'CSV' 
+COMPRESSION = 'AUTO' 
+FIELD_DELIMITER = ',' 
+RECORD_DELIMITER = '\n' 
+SKIP_HEADER = 0 
+FIELD_OPTIONALLY_ENCLOSED_BY = '\042' 
+TRIM_SPACE = FALSE 
+ERROR_ON_COLUMN_COUNT_MISMATCH = TRUE 
+ESCAPE = '\134' 
+ESCAPE_UNENCLOSED_FIELD = '\134'
+DATE_FORMAT = 'AUTO' 
+TIMESTAMP_FORMAT = 'AUTO' 
+NULL_IF = ('NULL');
 
-the HTML file has tables as well
-ChatGPT
-Got it. If you have an HTML file represented as a JSON object and it contains tables, you might want to extract and manipulate the table data.
-
-Please provide the JSON object, and let me know what specific tasks you want to perform with the table data. For example, do you want to:
-
-Extract and display the table data
-Convert the table data to a different format (e.g., CSV, DataFrame)
-Perform some analysis or transformation on the table data
-Providing the JSON object will help me understand the structure and give you precise assistance.
-
-Now I want read the json  and create chunk in HTML file.in such a way that one chunk for each record in the table
-ChatGPT
-Sure, I can help you with that. Please provide the JSON object so I can see its structure and understand how the table data is organized. Once I have that, I can guide you through reading the JSON and creating chunks in an HTML file, with each chunk representing one record from the table.
-
-If you can, paste the JSON object here. If it's too large or complex, you can provide a simplified version or a snippet that captures the structure of the data.
-
-give me python code for this,
-ChatGPT
-Sure, here's a Python script that reads a JSON object containing table data, extracts each record, and creates HTML chunks for each record:
-
-python
-Copy code
-import json
-
-# Sample JSON object (replace this with your actual JSON data)
-json_data = '''
-{
-    "table": [
-        {"column1": "value1", "column2": "value2", "column3": "value3"},
-        {"column1": "value4", "column2": "value5", "column3": "value6"},
-        {"column1": "value7", "column2": "value8", "column3": "value9"}
-    ]
-}
-'''
-
-# Load the JSON data
-data = json.loads(json_data)
-
-# Extract table data
-table_data = data['table']
-
-# Create HTML chunks
-html_chunks = []
-
-for record in table_data:
-    chunk = "<div class='record'>\n"
-    for key, value in record.items():
-        chunk += f"  <p>{key}: {value}</p>\n"
-    chunk += "</div>\n"
-    html_chunks.append(chunk)
-
-# Combine chunks into a single HTML string
-html_output = "<html>\n<body>\n"
-html_output += "\n".join(html_chunks)
-html_output += "</body>\n</html>"
-
-# Print or save the HTML output
-print(html_output)
-
-# Optionally, save the output to an HTML file
-with open("output.html", "w") as file:
-    file.write(html_output)
-Explanation:
-Load JSON Data:
-
-The sample JSON data contains a table with records.
-Load the JSON data into a Python dictionary.
-Extract Table Data:
-
-Extract the list of records from the JSON data.
-Create HTML Chunks:
-
-Iterate through each record in the table.
-Create an HTML chunk for each record, wrapping it in a <div> element.
-For each key-value pair in the record, create a <p> element.
-Combine Chunks:
-
-Combine all HTML chunks into a single HTML string.
-Wrap the chunks in <html> and <body> tags.
-Output HTML:
-
-Print the HTML output.
-Optionally, save the HTML output to a file named output.html.
-Replace the json_data variable with your actual JSON data to use the script with your data.
-
-use partition_html function  from unstructured.partition.html
-ChatGPT
-Sure, I'll guide you through using the partition_html function from the unstructured.partition.html library to achieve your goal. Here’s how you can do it:
-
-Install the Unstructured Package: If you haven't already, install the unstructured package using pip.
-Use the partition_html function to read the JSON and create HTML chunks.
-First, install the required package:
-
-bash
-Copy code
-pip install unstructured
-Next, here's the Python code to read the JSON, use the partition_html function, and create chunks in the HTML file:
-
-python
-Copy code
-import json
-from unstructured.partition.html import partition_html
-
-# Sample JSON object (replace this with your actual JSON data)
-json_data = '''
-{
-    "table": [
-        {"column1": "value1", "column2": "value2", "column3": "value3"},
-        {"column1": "value4", "column2": "value5", "column3": "value6"},
-        {"column1": "value7", "column2": "value8", "column3": "value9"}
-    ]
-}
-'''
-
-# Load the JSON data
-data = json.loads(json_data)
-
-# Extract table data
-table_data = data['table']
-
-# Function to create HTML chunks from table data
-def create_html_chunks(table_data):
-    html_chunks = []
-    for record in table_data:
-        chunk = "<div class='record'>\n"
-        for key, value in record.items():
-            chunk += f"  <p>{key}: {value}</p>\n"
-        chunk += "</div>\n"
-        html_chunks.append(chunk)
-    return html_chunks
-
-# Create HTML chunks from the table data
-html_chunks = create_html_chunks(table_data)
-
-# Combine chunks into a single HTML string
-html_output = "<html>\n<body>\n"
-html_output += "\n".join(html_chunks)
-html_output += "</body>\n</html>"
-
-# Save the output to an HTML file
-with open("output.html", "w") as file:
-    file.write(html_output)
-
-# Read and partition the HTML file
-elements = partition_html(filename="output.html")
-
-# Print the partitioned elements
-for element in elements:
-    print(element)
-Explanation:
-Install the unstructured Package:
-
-Install the package using pip install unstructured.
-Load JSON Data:
-
-The sample JSON data contains a table with records.
-Load the JSON data into a Python dictionary.
-Extract Table Data:
-
-Extract the list of records from the JSON data.
-Create HTML Chunks:
-
-Define a function to create HTML chunks from the table data.
-Iterate through each record in the table.
-Create an HTML chunk for each record, wrapping it in a <div> element.
-For each key-value pair in the record, create a <p> element.
-Combine Chunks:
-
-Combine all HTML chunks into a single HTML string.
-Wrap the chunks in <html> and <body> tags.
-Save and Partition HTML:
-
-Save the HTML output to a file named output.html.
-Use the partition_html function from the unstructured package to partition the HTML file.
-Print the partitioned elements.
-This script will create an HTML file with chunks for each record and then use the partition_html function to read and partition the HTML file. Replace the json_data variable with your actual JSON data to use the script with your data.
-
-
-2/2
-
-I have html code .I want to read that HTML code.check any tables are present.if so chunk it  row by row.need python code for this
-ChatGPT
-Sure! Here’s a Python script that reads HTML code, checks for tables, and chunks the tables row by row. This script uses the BeautifulSoup library to parse the HTML and extract the table rows.
-
-First, ensure you have the required libraries installed:
-
-bash
-Copy code
-pip install beautifulsoup4
-pip install lxml
-Now, here’s the Python code:
-
-python
-Copy code
-from bs4 import BeautifulSoup
-
-# Sample HTML code (replace this with your actual HTML code)
-html_code = """
-<html>
-<head><title>Sample Table</title></head>
-<body>
-    <table>
-        <tr><th>Header1</th><th>Header2</th><th>Header3</th></tr>
-        <tr><td>value1</td><td>value2</td><td>value3</td></tr>
-        <tr><td>value4</td><td>value5</td><td>value6</td></tr>
-        <tr><td>value7</td><td>value8</td><td>value9</td></tr>
-    </table>
-</body>
-</html>
-"""
-
-# Parse the HTML code
-soup = BeautifulSoup(html_code, 'lxml')
-
-# Find all tables in the HTML
-tables = soup.find_all('table')
-
-# Function to create HTML chunks from table rows
-def create_html_chunks(tables):
-    chunks = []
-    for table in tables:
-        rows = table.find_all('tr')
-        for row in rows:
-            chunk = "<div class='record'>\n"
-            cells = row.find_all(['th', 'td'])
-            for cell in cells:
-                chunk += f"  <p>{cell.text}</p>\n"
-            chunk += "</div>\n"
-            chunks.append(chunk)
-    return chunks
+-- Table DDL
+create or replace TABLE SYS_UTILS.SOURCE.tablebkup_workload (
+    DBNAME VARCHAR(100),
+    SCHEMANAME VARCHAR(100),
+    TABLENAME VARCHAR(100),
+    FREQUENCY VARCHAR(100),
+    LASTBKUPDT DATE,
+    DEL_FL VARCHAR(1),
+    FULL_INCR VARCHAR(10),
+    INCR_WHERE_CLAUSE VARCHAR(100)
+);
