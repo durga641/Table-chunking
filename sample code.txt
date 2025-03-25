@@ -46,3 +46,32 @@ OVERWRITE = TRUE
 SINGLE = TRUE;  -- Ensures a single file
 "
 '''
+
+
+
+import os
+import glob
+
+def clean_old_files(base_path, db_nm, sch_nm, tab_nm):
+    # Construct the file path pattern
+    file_pattern = os.path.join(base_path, f"{db_nm}/{sch_nm}/{tab_nm}/{tab_nm}*")
+    
+    # Get the list of matching files sorted by modification time (newest first)
+    files = sorted(glob.glob(file_pattern), key=os.path.getmtime, reverse=True)
+    
+    # If there are more than 5 files, keep the latest 4 and delete the rest
+    if len(files) > 5:
+        files_to_delete = files[4:]  # Keep the latest 4, delete the rest
+        for file in files_to_delete:
+            os.remove(file)
+            print(f"Deleted: {file}")
+    else:
+        print("No action required. Files are 4 or less.")
+
+# Example Usage
+base_path = "/your/s3/mount/path"  # Change this to the actual path where files are stored
+db_nm = "database"
+sch_nm = "schema"
+tab_nm = "table"
+
+clean_old_files(base_path, db_nm, sch_nm, tab_nm)
