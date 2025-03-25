@@ -32,3 +32,17 @@ create or replace TABLE SYS_UTILS.SOURCE.tablebkup_workload (
     FULL_INCR VARCHAR(10),
     INCR_WHERE_CLAUSE VARCHAR(100)
 );
+
+
+copy_script = f'''
+snowsql -c serv_source -o exit_on_error=true -q "
+USE DATABASE {db_nm}; 
+USE SCHEMA {sch_nm}; 
+
+COPY INTO @SYS_UTILS_SOURCE.TABLE_BACKUP_STAGE/{csv_file}.gz
+FROM (SELECT * FROM {table_name})
+FILE_FORMAT = (FORMAT_NAME = 'SYS_UTILS_SOURCE.TABLE_BACKUP_FF')
+OVERWRITE = TRUE
+SINGLE = TRUE;  -- Ensures a single file
+"
+'''
