@@ -50,15 +50,17 @@ SINGLE = TRUE;  -- Ensures a single file
 
 import boto3
 from urllib.parse import urlparse
+import re
 
-def clean_old_files(base_path, file_prefix):
+def clean_old_files(base_path, file_prefix, num_backups):
     """
     Searches for files with the given prefix in the specified S3 path.
-    Retains only the latest 4 files, deleting older ones.
+    Retains only the latest 'num_backups' backup sets, deleting older ones.
 
     Args:
     - base_path (str): The full S3 URL (e.g., s3://bucket-name/folder/subfolder/).
-    - file_prefix (str): The prefix of the files to search for (e.g., "backup_").
+    - file_prefix (str): The prefix of the files to search for (e.g., "tab_name_").
+    - num_backups (int): The number of latest backups to retain.
     """
     s3 = boto3.client('s3')
 
@@ -75,27 +77,41 @@ def clean_old_files(base_path, file_prefix):
         return
 
     # Filter files that match the given prefix
-    matching_files = [obj for obj in response['Contents'] if obj['Key'].startswith(f"{base_prefix}/{file_prefix}")]
+    matching_files = [obj['Key'] for obj in response['Contents'] if obj['Key'].startswith(f"{base_prefix}/{file_prefix}")]
 
     if not matching_files:
         print(f"No files found with prefix '{file_prefix}' in: s3://{bucket_name}/{base_prefix}")
         return
 
-    # Sort files by LastModified (newest first)
-    matching_files.sort(key=lambda obj: obj['LastModified'], reverse=True)
+    # Extract unique timestamps from file names (ignoring partition suffix)
+    timestamp_pattern = re.compile(rf"{file_prefix}(\d{{4}}-\d{{2}}-\d{{2}}-\d{{2}}-\d{{2}}-\d{{2}})_")
+    backup_groups = {}
 
-    # If more than 4 files, delete older ones
-    if len(matching_files) > 4:
-        files_to_delete = matching_files[4:]  # Keep the latest 4, delete the rest
+    for file in matching_files:
+        match = timestamp_pattern.search(file)
+        if match:
+            timestamp = match.group(1)
+            if timestamp not in backup_groups:
+                backup_groups[timestamp] = []
+            backup_groups[timestamp].append(file)
+
+    # Sort timestamps in descending order (latest first)
+    sorted_timestamps = sorted(backup_groups.keys(), reverse=True)
+
+    # Identify old backups to delete (if more than num_backups exist)
+    if len(sorted_timestamps) > num_backups:
+        old_timestamps = sorted_timestamps[num_backups:]
+        files_to_delete = [file for ts in old_timestamps for file in backup_groups[ts]]
 
         for file in files_to_delete:
-            s3.delete_object(Bucket=bucket_name, Key=file['Key'])
-            print(f"Deleted: s3://{bucket_name}/{file['Key']}")
+            s3.delete_object(Bucket=bucket_name, Key=file)
+            print(f"Deleted: s3://{bucket_name}/{file}")
     else:
-        print("No action required. Files are 4 or less.")
+        print(f"No action required. {len(sorted_timestamps)} backups found, keeping {num_backups}.")
 
 # Example Usage
 base_path = "s3://your-s3-bucket-name/folder/subfolder"  # Base path including directories
-file_prefix = "backup_"  # Only consider files starting with "backup_"
+file_prefix = "tab1_"  # Prefix of backup files
+num_backups = 4  # Number of backups to retain
 
-clean_old_files(base_path, file_prefix)
+clean_old_files(base_path, file_prefix, num_backups)
