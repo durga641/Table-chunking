@@ -1,0 +1,6 @@
+key generation (private key and public key) :
+# Step 1: Generate the Private Key (2048-bit)
+openssl genrsa -out rsa_private_key.pem 2048
+
+# Step 2: Generate the Public Key from the Private Key
+openssl rsa -in rsa_private_key.pem -pubout -out rsa_public_key.pub
