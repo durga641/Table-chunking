@@ -1,27 +1,27 @@
-import snowflake.connector
+image: python:3.9  # Use Python environment
 
-# Snowflake connection parameters
-ACCOUNT = "<your_snowflake_account>"
-USER = "<your_snowflake_username>"
-PRIVATE_KEY_PATH = "<path_to_your_private_key>.p8"
+pipelines:
+  branches:
+    main:  # Trigger only on changes to the main branch
+      - step:
+          name: Execute SQL in Snowflake
+          script:
+            - apt-get update && apt-get install -y libssl-dev  # Ensure dependencies
+            - pip install snowflake-connector-python
 
-# Load the private key
-with open(PRIVATE_KEY_PATH, "rb") as key_file:
-    private_key = key_file.read()
+            # Set Snowflake credentials
+            - export SNOWFLAKE_ACCOUNT="xyz123.us-east-1"  # Replace with your details
+            - export SNOWFLAKE_USER="your_user"
+            - export SNOWFLAKE_DATABASE="your_database"
+            - export SNOWFLAKE_SCHEMA="your_schema"
+            - export SNOWFLAKE_WAREHOUSE="your_warehouse"
 
-# Establish connection
-conn = snowflake.connector.connect(
-    user=USER,
-    account=ACCOUNT,
-    private_key=private_key
-)
+            # Create a temporary private key file
+            - echo "-----BEGIN PRIVATE KEY-----" > /tmp/private_key.p8
+            - echo "$SNOWFLAKE_PRIVATE_KEY" >> /tmp/private_key.p8
+            - echo "-----END PRIVATE KEY-----" >> /tmp/private_key.p8
+            - export SNOWFLAKE_PRIVATE_KEY_PATH="/tmp/private_key.p8"
 
-# Check authentication
-try:
-    cursor = conn.cursor()
-    cursor.execute("SELECT CURRENT_USER(), CURRENT_ROLE()")
-    result = cursor.fetchone()
-    print(f"Connected as: {result[0]} with role: {result[1]}")
-finally:
-    cursor.close()
-    conn.close()
+            # Identify the latest SQL file added
+            - SQL_FILE=$(git diff --name-only HEAD^ HEAD | grep '\.sql' | tail -n 1)
+            - if [ -n "$SQL_FILE" ]; then python execute_sql.py "$SQL_FILE"; fi
