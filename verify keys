@@ -1,0 +1,53 @@
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.backends import default_backend
+
+# Paths to your private and public keys
+PRIVATE_KEY_PATH = "rsa_key.p8"  # Update with your private key path
+PUBLIC_KEY_PATH = "rsa_key.pub"  # Update with your public key path
+
+def load_private_key():
+    """Load and return the private key from a .p8 file"""
+    with open(PRIVATE_KEY_PATH, "rb") as key_file:
+        private_key = serialization.load_pem_private_key(
+            key_file.read(),
+            password=None,  # Ensure the private key is unencrypted
+            backend=default_backend()
+        )
+    return private_key
+
+def load_public_key():
+    """Load and return the public key from a .pub file"""
+    with open(PUBLIC_KEY_PATH, "rb") as key_file:
+        public_key = serialization.load_pem_public_key(
+            key_file.read(),
+            backend=default_backend()
+        )
+    return public_key
+
+def verify_key_pair():
+    """Check if the private and public keys match"""
+    try:
+        private_key = load_private_key()
+        public_key = load_public_key()
+        
+        # Get the public key derived from the private key
+        derived_public_key = private_key.public_key()
+
+        # Compare the two public keys
+        if derived_public_key.public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo
+        ) == public_key.public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo
+        ):
+            print("✅ The private key and public key are a valid pair.")
+        else:
+            print("❌ The private key and public key do NOT match.")
+    
+    except Exception as e:
+        print(f"⚠️ Error verifying key pair: {e}")
+
+# Run the verification
+verify_key_pair()
