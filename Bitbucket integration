@@ -1,6 +1,27 @@
-key generation (private key and public key) :
-# Step 1: Generate the Private Key (2048-bit)
-openssl genrsa -out rsa_private_key.pem 2048
+import snowflake.connector
 
-# Step 2: Generate the Public Key from the Private Key
-openssl rsa -in rsa_private_key.pem -pubout -out rsa_public_key.pub
+# Snowflake connection parameters
+ACCOUNT = "<your_snowflake_account>"
+USER = "<your_snowflake_username>"
+PRIVATE_KEY_PATH = "<path_to_your_private_key>.p8"
+
+# Load the private key
+with open(PRIVATE_KEY_PATH, "rb") as key_file:
+    private_key = key_file.read()
+
+# Establish connection
+conn = snowflake.connector.connect(
+    user=USER,
+    account=ACCOUNT,
+    private_key=private_key
+)
+
+# Check authentication
+try:
+    cursor = conn.cursor()
+    cursor.execute("SELECT CURRENT_USER(), CURRENT_ROLE()")
+    result = cursor.fetchone()
+    print(f"Connected as: {result[0]} with role: {result[1]}")
+finally:
+    cursor.close()
+    conn.close()
