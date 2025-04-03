@@ -25,3 +25,19 @@ pipelines:
             # Identify the latest SQL file added
             - SQL_FILE=$(git diff --name-only HEAD^ HEAD | grep '\.sql' | tail -n 1)
             - if [ -n "$SQL_FILE" ]; then python execute_sql.py "$SQL_FILE"; fi
+
+
+
+
+
+pipelines:
+  branches:
+    main:
+      - step:
+          name: Run Python Script
+          script:
+            - python hello.py
+
+
+print("Hello, World! Bitbucket Pipelines is working!")
+
