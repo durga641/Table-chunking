@@ -41,3 +41,16 @@ pipelines:
 
 print("Hello, World! Bitbucket Pipelines is working!")
 
+image: python:3.9
+
+pipelines:
+  default:
+    - step:
+        name: Decrypt Password and Run Python Script
+        script:
+          - apt-get update && apt-get install -y gnupg
+          - echo "$GPG_PRIVATE_KEY" | base64 --decode | gpg --import
+          - gpg --decrypt --batch --passphrase "$GPG_PASSPHRASE" db_password.gpg > db_password.txt
+          - python hello.py
+
+
