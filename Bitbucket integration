@@ -54,3 +54,11 @@ pipelines:
           - python hello.py
 
 
+# Open the decrypted password file
+with open("db_password.txt", "r") as f:
+    db_password = f.read().strip()  # Read and strip any extra spaces/newlines
+
+# Display the password (this is just for testing purposes)
+print(f"The decrypted database password is: {db_password}")
+
+
