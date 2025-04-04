@@ -53,6 +53,42 @@ pipelines:
           - gpg --decrypt --batch --passphrase "$GPG_PASSPHRASE" db_password.gpg > db_password.txt
           - python hello.py
 
+image: python:3.9
+
+pipelines:
+  default:
+    - step:
+        name: Decrypt Password and Run Python Script
+        script:
+          # Install necessary tools for GPG and decryption
+          - apt-get update && apt-get install -y gnupg
+
+          # Set up GPG home directory and config file
+          - mkdir -p ~/.gnupg
+          - chmod 700 ~/.gnupg
+
+          # Import the GPG private key stored in Bitbucket Variables
+          - echo "$GPG_PRIVATE_KEY" | base64 --decode | gpg --batch --yes --import
+
+          # Create or configure the gpg.conf file
+          - echo "use-agent" > ~/.gnupg/gpg.conf
+          - echo "pinentry-mode loopback" >> ~/.gnupg/gpg.conf
+          
+          # Decrypt the db_password.gpg file
+          - gpg --batch --yes --decrypt --passphrase "$GPG_PASSPHRASE" --output db_password.txt db_password.gpg
+
+          # Run the Python script to print the password
+          - python db_connect.py
+
+
+
+# Open the decrypted password file
+with open("db_password.txt", "r") as f:
+    db_password = f.read().strip()  # Read and strip any extra spaces/newlines
+
+# Display the password (this is just for testing purposes)
+print(f"The decrypted database password is: {db_password}")
+
 
 # Open the decrypted password file
 with open("db_password.txt", "r") as f:
