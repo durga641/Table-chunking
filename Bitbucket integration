@@ -1,10 +1,37 @@
-# Download and run the SnowSQL installer
-          - curl -O https://sfc-repo.snowflakecomputing.com/snowsql/bootstrap/latest/linux_x86_64/snowsql-linux_x86_64.zip
-          - unzip snowsql-linux_x86_64.zip
-          - ./snowsql-linux_x86_64/install
+import snowflake.connector
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.backends import default_backend
 
-          # Add SnowSQL to PATH (if required)
-          - export PATH=$PATH:/root/.snowsql
+# Load the private key (.p8) with NO passphrase
+with open("private_key.p8", "rb") as key_file:
+    private_key = serialization.load_pem_private_key(
+        key_file.read(),
+        password=None  # No passphrase
+    )
 
-          # Verify SnowSQL installation
-          - snowsql --version
+# Convert to PKCS8 DER format (required by Snowflake)
+pkb = private_key.private_bytes(
+    encoding=serialization.Encoding.DER,
+    format=serialization.PrivateFormat.PKCS8,
+    encryption_algorithm=serialization.NoEncryption()
+)
+
+# Connect to Snowflake
+conn = snowflake.connector.connect(
+    user='YOUR_USERNAME',
+    account='YOUR_ACCOUNT_NAME',
+    private_key=pkb,
+    warehouse='YOUR_WAREHOUSE',
+    database='YOUR_DATABASE',
+    schema='YOUR_SCHEMA',
+    role='YOUR_ROLE'
+)
+
+# Run a test query
+cursor = conn.cursor()
+cursor.execute("SELECT CURRENT_TIMESTAMP();")
+for row in cursor:
+    print("Snowflake time:", row)
+
+cursor.close()
+conn.close()
