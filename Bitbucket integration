@@ -1,67 +1,15 @@
-image: python:3.9  # Use Python environment
-
-pipelines:
-  branches:
-    main:  # Trigger only on changes to the main branch
-      - step:
-          name: Execute SQL in Snowflake
-          script:
-            - apt-get update && apt-get install -y libssl-dev  # Ensure dependencies
-            - pip install snowflake-connector-python
-
-            # Set Snowflake credentials
-            - export SNOWFLAKE_ACCOUNT="xyz123.us-east-1"  # Replace with your details
-            - export SNOWFLAKE_USER="your_user"
-            - export SNOWFLAKE_DATABASE="your_database"
-            - export SNOWFLAKE_SCHEMA="your_schema"
-            - export SNOWFLAKE_WAREHOUSE="your_warehouse"
-
-            # Create a temporary private key file
-            - echo "-----BEGIN PRIVATE KEY-----" > /tmp/private_key.p8
-            - echo "$SNOWFLAKE_PRIVATE_KEY" >> /tmp/private_key.p8
-            - echo "-----END PRIVATE KEY-----" >> /tmp/private_key.p8
-            - export SNOWFLAKE_PRIVATE_KEY_PATH="/tmp/private_key.p8"
-
-            # Identify the latest SQL file added
-            - SQL_FILE=$(git diff --name-only HEAD^ HEAD | grep '\.sql' | tail -n 1)
-            - if [ -n "$SQL_FILE" ]; then python execute_sql.py "$SQL_FILE"; fi
-
-
-
-
-
-pipelines:
-  branches:
-    main:
-      - step:
-          name: Run Python Script
-          script:
-            - python hello.py
-
-
-print("Hello, World! Bitbucket Pipelines is working!")
-
-image: python:3.9
-
 pipelines:
   default:
     - step:
-        name: Decrypt Password and Run Python Script
+        name: Decrypt Password and Run SQL Scripts in Snowflake
         script:
-          - apt-get update && apt-get install -y gnupg
-          - echo "$GPG_PRIVATE_KEY" | base64 --decode | gpg --import
-          - gpg --decrypt --batch --passphrase "$GPG_PASSPHRASE" db_password.gpg > db_password.txt
-          - python hello.py
+          # Install necessary tools for GPG, decryption, and SnowSQL
+          - apt-get update && apt-get install -y gnupg git curl python3 python3-pip
 
-image: python:3.9
-
-pipelines:
-  default:
-    - step:
-        name: Decrypt Password and Run Python Script
-        script:
-          # Install necessary tools for GPG and decryption
-          - apt-get update && apt-get install -y gnupg
+          # Install SnowSQL CLI
+          - curl -O https://s3.amazonaws.com/snowflake-client-artifacts/snowsql/latest/snowflake_snowsql_linux_x86_64_binaries.tar.gz
+          - tar -xzvf snowflake_snowsql_linux_x86_64_binaries.tar.gz
+          - mv snowsql /usr/local/bin/  # Move snowsql to /usr/local/bin for global access
 
           # Set up GPG home directory and config file
           - mkdir -p ~/.gnupg
@@ -77,24 +25,8 @@ pipelines:
           # Decrypt the db_password.gpg file
           - gpg --batch --yes --decrypt --passphrase "$GPG_PASSPHRASE" --output db_password.txt db_password.gpg
 
-          # Run the Python script to print the password
-          - python db_connect.py
+          # Install Python dependencies
+          - pip3 install subprocess
 
-
-
-# Open the decrypted password file
-with open("db_password.txt", "r") as f:
-    db_password = f.read().strip()  # Read and strip any extra spaces/newlines
-
-# Display the password (this is just for testing purposes)
-print(f"The decrypted database password is: {db_password}")
-
-
-# Open the decrypted password file
-with open("db_password.txt", "r") as f:
-    db_password = f.read().strip()  # Read and strip any extra spaces/newlines
-
-# Display the password (this is just for testing purposes)
-print(f"The decrypted database password is: {db_password}")
-
-
+          # Run the Python script to identify modified SQL files and execute them in Snowflake
+          - python3 db_connect.py
