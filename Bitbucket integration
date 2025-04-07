@@ -1,8 +1,41 @@
-private_key_passphrase = os.getenv("SNOWFLAKE_PRIVATE_KEY_PASSPHRASE")
+# Step 1: Install GPG and Git Secret
+sudo apt update
+sudo apt install -y gnupg git-secret
 
-with open(private_key_path, "rb") as key_file:
-    private_key = serialization.load_pem_private_key(
-        key_file.read(),
-        password=private_key_passphrase.encode() if private_key_passphrase else None,
-        backend=default_backend()
-    )
+# Step 2: Generate GPG Key Pair (you will be prompted for details and passphrase)
+gpg --full-generate-key
+
+# Optional: List GPG keys to get key ID and confirm setup
+gpg --list-secret-keys --keyid-format LONG
+
+# Optional: Export public and private keys
+gpg --armor --export your-email@example.com > public-key.asc
+gpg --armor --export-secret-keys your-email@example.com > private-key.asc
+
+# Step 3: Create a Git repo and initialize git-secret
+mkdir my-secure-repo && cd my-secure-repo
+git init
+git secret init
+
+# Step 4: Trust yourself with your GPG key
+git secret tell your-email@example.com
+
+# Step 5: Create or copy the .p8 file into the repo
+echo "dummy-private-key-content" > private-key.p8
+
+# Step 6: Add the .p8 file to git-secret and ignore the plaintext
+git secret add private-key.p8
+echo "private-key.p8" >> .gitignore
+
+# Step 7: Encrypt the file
+git secret hide
+
+# Step 8: Decrypt the file (to test decryption, if needed)
+gpg --decrypt private-key.p8.gpg > private-key.p8
+
+# Step 9: Add only the encrypted file to Git
+git add private-key.p8.gpg .gitignore
+git commit -m "Added encrypted .p8 key using git-secret"
+
+
+Replace your-email@example.com with the actual email used during GPG key creation.
