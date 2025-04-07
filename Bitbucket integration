@@ -1,32 +1,6 @@
-pipelines:
-  default:
-    - step:
-        name: Decrypt Password and Run SQL Scripts in Snowflake
-        script:
-          # Install necessary tools for GPG, decryption, and SnowSQL
-          - apt-get update && apt-get install -y gnupg git curl python3 python3-pip
-
-          # Install SnowSQL CLI
-          - curl -O https://s3.amazonaws.com/snowflake-client-artifacts/snowsql/latest/snowflake_snowsql_linux_x86_64_binaries.tar.gz
+- curl -O https://s3.amazonaws.com/snowflake-client-artifacts/snowsql/latest/snowflake_snowsql_linux_x86_64_binaries.tar.gz
           - tar -xzvf snowflake_snowsql_linux_x86_64_binaries.tar.gz
           - mv snowsql /usr/local/bin/  # Move snowsql to /usr/local/bin for global access
 
-          # Set up GPG home directory and config file
-          - mkdir -p ~/.gnupg
-          - chmod 700 ~/.gnupg
-
-          # Import the GPG private key stored in Bitbucket Variables
-          - echo "$GPG_PRIVATE_KEY" | base64 --decode | gpg --batch --yes --import
-
-          # Create or configure the gpg.conf file
-          - echo "use-agent" > ~/.gnupg/gpg.conf
-          - echo "pinentry-mode loopback" >> ~/.gnupg/gpg.conf
-          
-          # Decrypt the db_password.gpg file
-          - gpg --batch --yes --decrypt --passphrase "$GPG_PASSPHRASE" --output db_password.txt db_password.gpg
-
-          # Install Python dependencies
-          - pip3 install subprocess
-
-          # Run the Python script to identify modified SQL files and execute them in Snowflake
-          - python3 db_connect.py
+          # Verify SnowSQL installation
+          - snowsql --version
