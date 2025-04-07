@@ -1,6 +1,10 @@
-- curl -O https://s3.amazonaws.com/snowflake-client-artifacts/snowsql/latest/snowflake_snowsql_linux_x86_64_binaries.tar.gz
-          - tar -xzvf snowflake_snowsql_linux_x86_64_binaries.tar.gz
-          - mv snowsql /usr/local/bin/  # Move snowsql to /usr/local/bin for global access
+# Download and run the SnowSQL installer
+          - curl -O https://sfc-repo.snowflakecomputing.com/snowsql/bootstrap/latest/linux_x86_64/snowsql-linux_x86_64.zip
+          - unzip snowsql-linux_x86_64.zip
+          - ./snowsql-linux_x86_64/install
+
+          # Add SnowSQL to PATH (if required)
+          - export PATH=$PATH:/root/.snowsql
 
           # Verify SnowSQL installation
           - snowsql --version
