@@ -24,6 +24,28 @@ import json
 # Get the environment (default to "dev" if not set)
 ENV = os.getenv("ENVIRONMENT", "dev")
 
+
+# Simple Python program to read and print a file's content
+
+def read_file(file_path):
+    try:
+        # Open the file in read mode
+        with open(file_path, 'r') as file:
+            # Read and print the content of the file
+            content = file.read()
+            print(content)
+    except FileNotFoundError:
+        print(f"Error: The file '{file_path}' was not found.")
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+# Specify the path to your file
+file_path = 'example.txt'  # Replace with your file path
+
+# Call the function to read and print the file
+read_file(file_path)
+
+
 # Load JSON config
 config_path = "config/config.json"
 if not os.path.exists(config_path):
