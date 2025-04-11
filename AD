@@ -1,0 +1,12 @@
+CREATE OR REPLACE SNOWFLAKE.ML.ANOMALY_DETECTION your_database_name.your_schema_name.sales_anomaly_model(
+  INPUT_DATA => SYSTEM$QUERY_REFERENCE('SELECT quarter_date, sum_of_sales FROM your_database_name.your_schema_name.sales_time_series'),
+  TIMESTAMP_COLNAME => 'quarter_date',
+  TARGET_COLNAME => 'sum_of_sales'
+);
+
+-- Detect anomalies with full object path
+CALL your_database_name.your_schema_name.sales_anomaly_model!DETECT_ANOMALIES(
+  INPUT_DATA => SYSTEM$QUERY_REFERENCE('SELECT quarter_date, sum_of_sales FROM your_database_name.your_schema_name.sales_time_series'),
+  TIMESTAMP_COLNAME => 'quarter_date',
+  TARGET_COLNAME => 'sum_of_sales'
+);
