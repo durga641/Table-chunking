@@ -1,24 +1,27 @@
--- TABLES
-SELECT GET_DDL('TABLE', 'MY_DATABASE.MY_SCHEMA.' || table_name) AS ddl
-FROM information_schema.tables
-WHERE table_schema = 'MY_SCHEMA';
+-- Use your database
+USE DATABASE MY_DATABASE;
 
--- VIEWS
-SELECT GET_DDL('VIEW', 'MY_DATABASE.MY_SCHEMA.' || table_name) AS ddl
-FROM information_schema.views
-WHERE table_schema = 'MY_SCHEMA';
+-- Tables, Views, Sequences, Functions, Procedures — GET_DDL across all schemas
+SELECT GET_DDL('TABLE', TABLE_CATALOG || '.' || TABLE_SCHEMA || '.' || TABLE_NAME) AS ddl
+FROM INFORMATION_SCHEMA.TABLES
+WHERE TABLE_TYPE = 'BASE TABLE'
 
--- SEQUENCES
-SELECT GET_DDL('SEQUENCE', 'MY_DATABASE.MY_SCHEMA.' || sequence_name) AS ddl
-FROM information_schema.sequences
-WHERE sequence_schema = 'MY_SCHEMA';
+UNION ALL
 
--- FUNCTIONS
-SELECT GET_DDL('FUNCTION', 'MY_DATABASE.MY_SCHEMA.' || function_name || '(' || arguments || ')') AS ddl
-FROM information_schema.functions
-WHERE function_schema = 'MY_SCHEMA';
+SELECT GET_DDL('VIEW', TABLE_CATALOG || '.' || TABLE_SCHEMA || '.' || TABLE_NAME) AS ddl
+FROM INFORMATION_SCHEMA.VIEWS
 
--- PROCEDURES
-SELECT GET_DDL('PROCEDURE', 'MY_DATABASE.MY_SCHEMA.' || procedure_name || '(' || arguments || ')') AS ddl
-FROM information_schema.procedures
-WHERE procedure_schema = 'MY_SCHEMA';
+UNION ALL
+
+SELECT GET_DDL('SEQUENCE', SEQUENCE_CATALOG || '.' || SEQUENCE_SCHEMA || '.' || SEQUENCE_NAME) AS ddl
+FROM INFORMATION_SCHEMA.SEQUENCES
+
+UNION ALL
+
+SELECT GET_DDL('FUNCTION', FUNCTION_CATALOG || '.' || FUNCTION_SCHEMA || '.' || FUNCTION_NAME || '(' || ARGUMENT_SIGNATURE || ')') AS ddl
+FROM INFORMATION_SCHEMA.FUNCTIONS
+
+UNION ALL
+
+SELECT GET_DDL('PROCEDURE', PROCEDURE_CATALOG || '.' || PROCEDURE_SCHEMA || '.' || PROCEDURE_NAME || '(' || ARGUMENT_SIGNATURE || ')') AS ddl
+FROM INFORMATION_SCHEMA.PROCEDURES;
