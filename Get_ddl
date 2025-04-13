@@ -1,71 +1,24 @@
-import os
-import snowflake.connector
-from getpass import getpass
+-- TABLES
+SELECT GET_DDL('TABLE', 'MY_DATABASE.MY_SCHEMA.' || table_name) AS ddl
+FROM information_schema.tables
+WHERE table_schema = 'MY_SCHEMA';
 
-# ---- CONFIGURATION ----
-ACCOUNT = "<your_account>"           # e.g., "abc-xy12345"
-USER = "<your_user>"                 # Snowflake username
-PRIVATE_KEY_PATH = "/path/to/rsa_key.p8"
-PRIVATE_KEY_PASSPHRASE = None        # If encrypted; use getpass() or type directly
-WAREHOUSE = "<your_warehouse>"
-DATABASE = "<your_database>"
-OUTPUT_FILE = "all_ddls.sql"
+-- VIEWS
+SELECT GET_DDL('VIEW', 'MY_DATABASE.MY_SCHEMA.' || table_name) AS ddl
+FROM information_schema.views
+WHERE table_schema = 'MY_SCHEMA';
 
-# ---- LOAD PRIVATE KEY ----
-from cryptography.hazmat.primitives import serialization
-with open(PRIVATE_KEY_PATH, "rb") as key_file:
-    p_key = serialization.load_pem_private_key(
-        key_file.read(),
-        password=PRIVATE_KEY_PASSPHRASE.encode() if PRIVATE_KEY_PASSPHRASE else None,
-    )
+-- SEQUENCES
+SELECT GET_DDL('SEQUENCE', 'MY_DATABASE.MY_SCHEMA.' || sequence_name) AS ddl
+FROM information_schema.sequences
+WHERE sequence_schema = 'MY_SCHEMA';
 
-private_key = p_key.private_bytes(
-    encoding=serialization.Encoding.DER,
-    format=serialization.PrivateFormat.PKCS8,
-    encryption_algorithm=serialization.NoEncryption()
-)
+-- FUNCTIONS
+SELECT GET_DDL('FUNCTION', 'MY_DATABASE.MY_SCHEMA.' || function_name || '(' || arguments || ')') AS ddl
+FROM information_schema.functions
+WHERE function_schema = 'MY_SCHEMA';
 
-# ---- CONNECT TO SNOWFLAKE ----
-conn = snowflake.connector.connect(
-    user=USER,
-    account=ACCOUNT,
-    private_key=private_key,
-    warehouse=WAREHOUSE,
-    database=DATABASE
-)
-
-cur = conn.cursor()
-
-# ---- OUTPUT FILE INIT ----
-with open(OUTPUT_FILE, "w") as f:
-    f.write(f"-- DDL export from database: {DATABASE}\n\n")
-
-    # ---- GET ALL SCHEMAS ----
-    cur.execute(f"SHOW SCHEMAS IN DATABASE {DATABASE}")
-    schemas = [row[1] for row in cur.fetchall()]
-
-    object_types = ["TABLE", "VIEW", "FUNCTION", "PROCEDURE", "SEQUENCE", "STREAM", "TASK", "FILE FORMAT", "STAGE"]
-
-    for schema in schemas:
-        f.write(f"\n-- Schema: {schema}\n")
-        cur.execute(f"USE SCHEMA {DATABASE}.{schema}")
-
-        for obj_type in object_types:
-            try:
-                plural = obj_type + "S" if obj_type != "FILE FORMAT" else "FILE FORMATS"
-                cur.execute(f"SHOW {plural} IN {DATABASE}.{schema}")
-                object_names = [row[1] for row in cur.fetchall()]
-
-                for obj in object_names:
-                    try:
-                        cur.execute(f"SELECT GET_DDL('{obj_type}', '{DATABASE}.{schema}.{obj}')")
-                        ddl = cur.fetchone()[0]
-                        f.write(f"\n-- {obj_type}: {DATABASE}.{schema}.{obj}\n{ddl};\n")
-                    except Exception as e:
-                        f.write(f"-- Failed to get DDL for {obj_type} {DATABASE}.{schema}.{obj}: {e}\n")
-            except Exception as e:
-                f.write(f"-- Failed to list {obj_type}s in {schema}: {e}\n")
-
-cur.close()
-conn.close()
-print(f"✅ All DDLs exported to {OUTPUT_FILE}")
+-- PROCEDURES
+SELECT GET_DDL('PROCEDURE', 'MY_DATABASE.MY_SCHEMA.' || procedure_name || '(' || arguments || ')') AS ddl
+FROM information_schema.procedures
+WHERE procedure_schema = 'MY_SCHEMA';
