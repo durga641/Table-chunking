@@ -13,6 +13,14 @@ The pipeline must ensure no sensitive data is logged and should maintain basic e
 
 Provide a mechanism to extract the DDL of existing Snowflake objects (e.g., tables, views) and store them for version control or backup purposes
 
+One-Time Setup Activities
+Initial DDL Extraction from Snowflake
+
+Utilize Snowflake's GET_DDL function to extract the definitions of existing database objects (e.g., tables, views) for version control and backup purposes. ​
+
+Configuring Git Secrets for Secure Private Key Management
+
+Set up git-secret to encrypt and manage your Snowflake private key within the Git repository, ensuring secure authentication without exposing sensitive credentials.
 
 # Step 1: Install GPG and Git Secret
 sudo apt update
