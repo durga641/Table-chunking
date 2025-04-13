@@ -24,4 +24,29 @@ FROM INFORMATION_SCHEMA.FUNCTIONS
 UNION ALL
 
 SELECT GET_DDL('PROCEDURE', PROCEDURE_CATALOG || '.' || PROCEDURE_SCHEMA || '.' || PROCEDURE_NAME || '(' || ARGUMENT_SIGNATURE || ')') AS ddl
+
+
+
+
+
+#!/bin/bash
+
+PROFILE="serv_source"
+DATABASE="MY_DB"
+OUTPUT="ddl_dump.sql"
+
+# Get all table names
+tables=$(snowsql -c $PROFILE -q "SELECT TABLE_SCHEMA, TABLE_NAME FROM $DATABASE.INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE';" -o output_format=csv | tail -n +2)
+
+echo "-- DDLs from $DATABASE" > $OUTPUT
+
+# Loop through each table and get its DDL
+while IFS=',' read -r schema name; do
+    echo "-- $schema.$name" >> $OUTPUT
+    snowsql -c $PROFILE -q "SELECT GET_DDL('TABLE', '$DATABASE.$schema.$name');" -o output_format=tsv | tail -n +2 >> $OUTPUT
+    echo ";" >> $OUTPUT
+done <<< "$tables"
+
+echo "✅ All DDLs saved to $OUTPUT"
+
 FROM INFORMATION_SCHEMA.PROCEDURES;
