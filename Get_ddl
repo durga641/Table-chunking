@@ -1,52 +1,89 @@
--- Use your database
-USE DATABASE MY_DATABASE;
-
--- Tables, Views, Sequences, Functions, Procedures — GET_DDL across all schemas
-SELECT GET_DDL('TABLE', TABLE_CATALOG || '.' || TABLE_SCHEMA || '.' || TABLE_NAME) AS ddl
-FROM INFORMATION_SCHEMA.TABLES
-WHERE TABLE_TYPE = 'BASE TABLE'
-
-UNION ALL
-
-SELECT GET_DDL('VIEW', TABLE_CATALOG || '.' || TABLE_SCHEMA || '.' || TABLE_NAME) AS ddl
-FROM INFORMATION_SCHEMA.VIEWS
-
-UNION ALL
-
-SELECT GET_DDL('SEQUENCE', SEQUENCE_CATALOG || '.' || SEQUENCE_SCHEMA || '.' || SEQUENCE_NAME) AS ddl
-FROM INFORMATION_SCHEMA.SEQUENCES
-
-UNION ALL
-
-SELECT GET_DDL('FUNCTION', FUNCTION_CATALOG || '.' || FUNCTION_SCHEMA || '.' || FUNCTION_NAME || '(' || ARGUMENT_SIGNATURE || ')') AS ddl
-FROM INFORMATION_SCHEMA.FUNCTIONS
-
-UNION ALL
-
-SELECT GET_DDL('PROCEDURE', PROCEDURE_CATALOG || '.' || PROCEDURE_SCHEMA || '.' || PROCEDURE_NAME || '(' || ARGUMENT_SIGNATURE || ')') AS ddl
-
-
-
-
-
 #!/bin/bash
 
 PROFILE="serv_source"
-DATABASE="MY_DB"
+DATABASE="MY_DB"  # ❗ Replace with your actual database name
 OUTPUT="ddl_dump.sql"
 
-# Get all table names
-tables=$(snowsql -c $PROFILE -q "SELECT TABLE_SCHEMA, TABLE_NAME FROM $DATABASE.INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE';" -o output_format=csv | tail -n +2)
+echo "-- DDLs from database: $DATABASE" > $OUTPUT
 
-echo "-- DDLs from $DATABASE" > $OUTPUT
+# Get list of schemas
+schemas=$(snowsql -c $PROFILE -q "SHOW SCHEMAS IN DATABASE $DATABASE;" -o output_format=csv | tail -n +2 | cut -d',' -f2)
 
-# Loop through each table and get its DDL
-while IFS=',' read -r schema name; do
-    echo "-- $schema.$name" >> $OUTPUT
+for schema in $schemas; do
+  echo -e "\n-- Schema: $schema" >> $OUTPUT
+
+  # 1. TABLES
+  tables=$(snowsql -c $PROFILE -q "SHOW TABLES IN SCHEMA $DATABASE.$schema;" -o output_format=csv | tail -n +2 | cut -d',' -f2)
+  for name in $tables; do
+    echo -e "\n-- TABLE: $schema.$name" >> $OUTPUT
     snowsql -c $PROFILE -q "SELECT GET_DDL('TABLE', '$DATABASE.$schema.$name');" -o output_format=tsv | tail -n +2 >> $OUTPUT
     echo ";" >> $OUTPUT
-done <<< "$tables"
+  done
+
+  # 2. VIEWS
+  views=$(snowsql -c $PROFILE -q "SHOW VIEWS IN SCHEMA $DATABASE.$schema;" -o output_format=csv | tail -n +2 | cut -d',' -f2)
+  for name in $views; do
+    echo -e "\n-- VIEW: $schema.$name" >> $OUTPUT
+    snowsql -c $PROFILE -q "SELECT GET_DDL('VIEW', '$DATABASE.$schema.$name');" -o output_format=tsv | tail -n +2 >> $OUTPUT
+    echo ";" >> $OUTPUT
+  done
+
+  # 3. SEQUENCES
+  seqs=$(snowsql -c $PROFILE -q "SHOW SEQUENCES IN SCHEMA $DATABASE.$schema;" -o output_format=csv | tail -n +2 | cut -d',' -f2)
+  for name in $seqs; do
+    echo -e "\n-- SEQUENCE: $schema.$name" >> $OUTPUT
+    snowsql -c $PROFILE -q "SELECT GET_DDL('SEQUENCE', '$DATABASE.$schema.$name');" -o output_format=tsv | tail -n +2 >> $OUTPUT
+    echo ";" >> $OUTPUT
+  done
+
+  # 4. FUNCTIONS
+  functions=$(snowsql -c $PROFILE -q "SHOW USER FUNCTIONS IN SCHEMA $DATABASE.$schema;" -o output_format=csv | tail -n +2)
+  while IFS=',' read -r name signature _; do
+    echo -e "\n-- FUNCTION: $schema.$name($signature)" >> $OUTPUT
+    snowsql -c $PROFILE -q "SELECT GET_DDL('FUNCTION', '$DATABASE.$schema.$name($signature)');" -o output_format=tsv | tail -n +2 >> $OUTPUT
+    echo ";" >> $OUTPUT
+  done <<< "$functions"
+
+  # 5. PROCEDURES
+  procedures=$(snowsql -c $PROFILE -q "SHOW PROCEDURES IN SCHEMA $DATABASE.$schema;" -o output_format=csv | tail -n +2)
+  while IFS=',' read -r name signature _; do
+    echo -e "\n-- PROCEDURE: $schema.$name($signature)" >> $OUTPUT
+    snowsql -c $PROFILE -q "SELECT GET_DDL('PROCEDURE', '$DATABASE.$schema.$name($signature)');" -o output_format=tsv | tail -n +2 >> $OUTPUT
+    echo ";" >> $OUTPUT
+  done <<< "$procedures"
+
+  # 6. STREAMS
+  streams=$(snowsql -c $PROFILE -q "SHOW STREAMS IN SCHEMA $DATABASE.$schema;" -o output_format=csv | tail -n +2 | cut -d',' -f2)
+  for name in $streams; do
+    echo -e "\n-- STREAM: $schema.$name" >> $OUTPUT
+    snowsql -c $PROFILE -q "SELECT GET_DDL('STREAM', '$DATABASE.$schema.$name');" -o output_format=tsv | tail -n +2 >> $OUTPUT
+    echo ";" >> $OUTPUT
+  done
+
+  # 7. TASKS
+  tasks=$(snowsql -c $PROFILE -q "SHOW TASKS IN SCHEMA $DATABASE.$schema;" -o output_format=csv | tail -n +2 | cut -d',' -f2)
+  for name in $tasks; do
+    echo -e "\n-- TASK: $schema.$name" >> $OUTPUT
+    snowsql -c $PROFILE -q "SELECT GET_DDL('TASK', '$DATABASE.$schema.$name');" -o output_format=tsv | tail -n +2 >> $OUTPUT
+    echo ";" >> $OUTPUT
+  done
+
+  # 8. FILE FORMATS
+  file_formats=$(snowsql -c $PROFILE -q "SHOW FILE FORMATS IN SCHEMA $DATABASE.$schema;" -o output_format=csv | tail -n +2 | cut -d',' -f2)
+  for name in $file_formats; do
+    echo -e "\n-- FILE FORMAT: $schema.$name" >> $OUTPUT
+    snowsql -c $PROFILE -q "SELECT GET_DDL('FILE FORMAT', '$DATABASE.$schema.$name');" -o output_format=tsv | tail -n +2 >> $OUTPUT
+    echo ";" >> $OUTPUT
+  done
+
+  # 9. STAGES
+  stages=$(snowsql -c $PROFILE -q "SHOW STAGES IN SCHEMA $DATABASE.$schema;" -o output_format=csv | tail -n +2 | cut -d',' -f2)
+  for name in $stages; do
+    echo -e "\n-- STAGE: $schema.$name" >> $OUTPUT
+    snowsql -c $PROFILE -q "SELECT GET_DDL('STAGE', '$DATABASE.$schema.$name');" -o output_format=tsv | tail -n +2 >> $OUTPUT
+    echo ";" >> $OUTPUT
+  done
+
+done
 
 echo "✅ All DDLs saved to $OUTPUT"
-
-FROM INFORMATION_SCHEMA.PROCEDURES;
