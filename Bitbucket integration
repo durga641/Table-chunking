@@ -51,6 +51,7 @@ echo "dummy-private-key-content" > private-key.p8
 git secret add private-key.p8
 echo "private-key.p8" >> .gitignore
 
+pg --encrypt --recipient recipient@example.com --output filename.gpg filename
 # Step 7: Encrypt the file
 git secret hide
 
