@@ -138,3 +138,15 @@ if not anomalies_df.empty:
 else:
     print("No anomalies found across all tables.")
 
+
+
+
+
+from snowflake.ml.anomaly_detection import HistogramBasedDetector
+
+# Initialize the detector
+detector = HistogramBasedDetector()
+
+# Fit and detect anomalies
+detector.fit(pandas_df[['value']])
+anomalies = detector.predict(pandas_df[['value']])
