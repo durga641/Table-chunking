@@ -63,3 +63,106 @@ git commit -m "Added encrypted .p8 key using git-secret"
 
 
 Replace your-email@example.com with the actual email used during GPG key creation.
+
+
+
+
+# -----------------------------------------------
+# 🚀 Step 1: Clone Your Git Repository
+# -----------------------------------------------
+git clone https://bitbucket.org/your-org/your-repo.git
+cd your-repo
+
+# -----------------------------------------------
+# 🔧 Step 2: Install Required Tools (GPG and git-secret)
+# -----------------------------------------------
+sudo apt update
+sudo apt install -y gnupg git
+
+# Install git-secret
+git clone https://github.com/sobolevn/git-secret.git
+cd git-secret
+sudo make build install
+cd ..
+rm -rf git-secret
+
+# Verify installations
+gpg --version
+git secret --version
+
+# -----------------------------------------------
+# 🔐 Step 3: Generate a GPG Key Pair
+# -----------------------------------------------
+# Follow the prompts to set your name, email, and a strong passphrase
+gpg --full-generate-key
+
+# List your GPG keys to confirm creation
+gpg --list-keys
+
+# -----------------------------------------------
+# 🛠️ Step 4: Initialize git-secret in Your Repository
+# -----------------------------------------------
+git secret init
+
+# Add your GPG key to git-secret
+# Replace 'your.email@example.com' with your GPG key email
+git secret tell your.email@example.com
+
+# -----------------------------------------------
+# 🔏 Step 5: Encrypt the Snowflake Private Key
+# -----------------------------------------------
+# Place your Snowflake private key (e.g., snowflake_private_key.pem) in the repository
+
+# Add the private key to git-secret
+git secret add snowflake_private_key.pem
+
+# Encrypt the private key
+git secret hide
+
+# Commit the encrypted file and updated .gitignore
+git add snowflake_private_key.pem.secret .gitignore
+git commit -m "Add encrypted Snowflake private key"
+
+# -----------------------------------------------
+# ⚙️ Step 6: Configure Bitbucket Repository Variables
+# -----------------------------------------------
+# In Bitbucket, navigate to:
+# Repository Settings > Repository Variables
+
+# Add the following variables:
+# - GPG_PRIVATE_KEY: The exported ASCII-armored GPG private key
+# - GPG_PRIVATE_KEY_PASSPHRASE: The passphrase for your GPG key
+# - SNOWFLAKE_PRIVATE_KEY_PASSPHRASE: The passphrase for your Snowflake private key
+# - SNOWFLAKE_PUBLIC_KEY: The Snowflake public key content
+
+# To export your GPG private key:
+gpg --export-secret-keys --armor your.email@example.com
+
+# Copy the output and set it as the value for GPG_PRIVATE_KEY
+
+# -----------------------------------------------
+# 🧪 Step 7: Decrypt Secrets During Bitbucket Pipeline Execution
+# -----------------------------------------------
+# In your bitbucket-pipelines.yml, add the following step:
+
+# Note: Ensure that the repository variables mentioned above are set
+
+# Example pipeline step:
+# - step:
+#     name: Decrypt Secrets
+#     image: ubuntu:latest
+#     script:
+#       - apt-get update && apt-get install -y gnupg git
+#       - echo "$GPG_PRIVATE_KEY" | gpg --import
+#       - git secret reveal -p "$GPG_PRIVATE_KEY_PASSPHRASE"
+
+# -----------------------------------------------
+# ✅ Step 8: Connect to Snowflake Using the Decrypted Private Key
+# -----------------------------------------------
+# After decryption, use the private key to authenticate with Snowflake
+# Example using SnowSQL:
+
+snowsql -a your_account -u your_username \
+  --private-key-path snowflake_private_key.pem \
+  --private-key-passphrase "$SNOWFLAKE_PRIVATE_KEY_PASSPHRASE"
+
