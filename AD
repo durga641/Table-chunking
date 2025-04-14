@@ -1,3 +1,15 @@
+CREATE OR REPLACE TABLE summary_data_anomalies AS
+SELECT *
+FROM TABLE(
+  SNOWFLAKE.ML.ANOMALY_DETECTION(
+    INPUT_DATA => SYSTEM$REFERENCE('TABLE', 'summary_data'),
+    TIMESTAMP_COLNAME => 'year_qtr',
+    TARGET_COLNAME => 'sum_of_sales'
+  )
+);
+
+
+
 -- Step 1: Create an anomaly detection model using the sum_of_sales column
 -- This uses Snowflake's built-in ML to automatically choose the algorithm (e.g., histogram or isolation forest)
 CREATE OR REPLACE SNOWFLAKE.ML.ANOMALY_DETECTION my_sales_anomaly_detector()
