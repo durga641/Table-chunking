@@ -26,6 +26,18 @@ FROM your_schema.your_sales_table;
 
 
 
+CREATE OR REPLACE TABLE summary_data_anomalies AS
+SELECT *
+FROM TABLE(
+  SNOWFLAKE.ML.ANOMALY_DETECTION(
+    INPUT_DATA => SYSTEM$REFERENCE('TABLE', 'summary_data'),
+    TIMESTAMP_COLNAME => 'year_qtr',
+    TARGET_COLNAME => 'sum_of_sales'
+  )
+);
+
+
+
 import subprocess
 import smtplib
 from email.mime.text import MIMEText
