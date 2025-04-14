@@ -1,56 +1,25 @@
-CREATE OR REPLACE SNOWFLAKE.ML.ANOMALY_DETECTION your_database_name.your_schema_name.sales_anomaly_model(
-  INPUT_DATA => SYSTEM$QUERY_REFERENCE('SELECT quarter_date, sum_of_sales FROM your_database_name.your_schema_name.sales_time_series'),
-  TIMESTAMP_COLNAME => 'quarter_date',
-  TARGET_COLNAME => 'sum_of_sales'
-);
+-- Step 1: Create an anomaly detection model using the sum_of_sales column
+-- This uses Snowflake's built-in ML to automatically choose the algorithm (e.g., histogram or isolation forest)
+CREATE OR REPLACE SNOWFLAKE.ML.ANOMALY_DETECTION my_sales_anomaly_detector()
+  FROM (
+    SELECT sum_of_sales
+    FROM your_schema.your_sales_table
+  );
 
--- Detect anomalies with full object path
-CALL your_database_name.your_schema_name.sales_anomaly_model!DETECT_ANOMALIES(
-  INPUT_DATA => SYSTEM$QUERY_REFERENCE('SELECT quarter_date, sum_of_sales FROM your_database_name.your_schema_name.sales_time_series'),
-  TIMESTAMP_COLNAME => 'quarter_date',
-  TARGET_COLNAME => 'sum_of_sales'
-);
-
-
-
--- 1. Create a view with sequential row numbers instead of timestamps
-CREATE OR REPLACE VIEW your_database_name.your_schema_name.sales_sequence AS
+-- Step 2: Predict anomalies using the trained detector
+-- The result will add a column: 
+--   anomaly_prediction = -1 for anomaly, 
+--   anomaly_prediction = 1 for normal
 SELECT 
-  ROW_NUMBER() OVER (ORDER BY quarter_date) AS row_id,  -- Creates an ordered sequence
-  sum_of_sales
-FROM your_database_name.your_schema_name.sales_time_series;
+  year_quarter,
+  sum_of_sales,
+  my_sales_anomaly_detector!PREDICT(sum_of_sales) AS anomaly_prediction
+FROM your_schema.your_sales_table;
 
--- 2. Create the anomaly detection model using row_id as dummy timestamp
-CREATE OR REPLACE SNOWFLAKE.ML.ANOMALY_DETECTION your_database_name.your_schema_name.sales_anomaly_model(
-  INPUT_DATA => SYSTEM$QUERY_REFERENCE('SELECT row_id, sum_of_sales FROM your_database_name.your_schema_name.sales_sequence'),
-  TIMESTAMP_COLNAME => 'row_id',  -- Using row_id instead of actual timestamp
-  TARGET_COLNAME => 'sum_of_sales',
-  CONFIG_OBJECT => {
-    'prediction_interval': 0.99,  -- Adjust sensitivity (0.95-0.99)
-    'seasonality_mode': 'none'    -- Disable seasonal pattern detection
-  }
-);
-
--- 3. Detect anomalies (join back with original data for context)
-WITH anomaly_results AS (
-  CALL your_database_name.your_schema_name.sales_anomaly_model!DETECT_ANOMALIES(
-    INPUT_DATA => SYSTEM$QUERY_REFERENCE('SELECT row_id, sum_of_sales FROM your_database_name.your_schema_name.sales_sequence'),
-    TIMESTAMP_COLNAME => 'row_id',
-    TARGET_COLNAME => 'sum_of_sales'
-  )
-)
+-- Step 3 (Optional): Save the results to a new table for analysis or reporting
+CREATE OR REPLACE TABLE your_schema.sales_with_anomalies AS
 SELECT 
-  s.quarter_date,
-  a.sum_of_sales,
-  a.is_anomaly,
-  a.anomaly_score,
-  a.prediction_interval_lower,
-  a.prediction_interval_upper
-FROM 
-  anomaly_results a
-JOIN 
-  your_database_name.your_schema_name.sales_time_series s
-  ON a.row_id = ROW_NUMBER() OVER (ORDER BY s.quarter_date)
-ORDER BY 
-  a.is_anomaly DESC, 
-  a.anomaly_score DESC;
+  year_quarter,
+  sum_of_sales,
+  my_sales_anomaly_detector!PREDICT(sum_of_sales) AS anomaly_prediction
+FROM your_schema.your_sales_table;
