@@ -1,3 +1,30 @@
+-- Step 1: Create input table with required format
+CREATE OR REPLACE TABLE amazon_anomaly_input AS
+SELECT 
+    'overall' AS series_id,  -- dummy series column (required)
+    TO_DATE(year_quarter || '-01', 'YYYY"-Q"Q-DD') AS timestamp,
+    sum_plays
+FROM amazon_summary;
+
+-- Step 2: Create the anomaly detection model (unsupervised)
+CREATE OR REPLACE snowflake.ml.anomaly_detection amazon_sumplays_anomaly_model (
+    INPUT_DATA => SYSTEM$REFERENCE('TABLE', 'amazon_anomaly_input'),
+    SERIES_COLNAME => 'series_id',
+    TIMESTAMP_COLNAME => 'timestamp',
+    TARGET_COLNAME => 'sum_plays',
+    LABEL_COLNAME => ''
+);
+
+-- Step 3: Use the model to predict anomalies
+SELECT *
+FROM TABLE(snowflake.ml.anomaly_detection_predict(
+    MODEL_NAME => 'amazon_sumplays_anomaly_model',
+    INPUT_DATA => SYSTEM$REFERENCE('TABLE', 'amazon_anomaly_input')
+));
+
+
+
+
 CREATE OR REPLACE TABLE summary_data_anomalies AS
 SELECT *
 FROM TABLE(
