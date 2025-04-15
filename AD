@@ -2,9 +2,19 @@
 CREATE OR REPLACE TABLE amazon_anomaly_input AS
 SELECT 
     'overall' AS series_id,  -- dummy series column (required)
-    TO_DATE(year_quarter || '-01', 'YYYY"-Q"Q-DD') AS timestamp,
+    -- Convert '2023Q1' to a DATE like '2023-01-01', '2023-04-01', etc.
+    TO_DATE(
+        LEFT(year_quarter, 4) || '-' || 
+        CASE RIGHT(year_quarter, 1)
+            WHEN '1' THEN '01'
+            WHEN '2' THEN '04'
+            WHEN '3' THEN '07'
+            WHEN '4' THEN '10'
+        END || '-01'
+    ) AS timestamp,
     sum_plays
 FROM amazon_summary;
+
 
 -- Step 2: Create the anomaly detection model (unsupervised)
 CREATE OR REPLACE snowflake.ml.anomaly_detection amazon_sumplays_anomaly_model (
