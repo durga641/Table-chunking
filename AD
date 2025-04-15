@@ -8,6 +8,27 @@ FROM TABLE(
   )
 );
 
+from sklearn.ensemble import IsolationForest
+import numpy as np
+
+# Given data points
+data = np.array([109, 173311948, 877000852, 1761422717, 2709597238, 3520851281,
+                 4786571328, 5578590732, 6518674574, 8081891920, 9020791441,
+                 9721358038, 10538481920, 12333567214, 13213081536, 14933979138,
+                 15035532426, 17593936187, 17702188999, 18350009789, 18460177879,
+                 19649095069, 20419228287]).reshape(-1, 1)  # Reshape to 2D array for Isolation Forest
+
+# Apply Isolation Forest
+model = IsolationForest(contamination=0.1)  # Set contamination to 0.1 for detecting outliers
+model.fit(data)
+
+# Predict outliers (-1 for outlier, 1 for inlier)
+predictions = model.predict(data)
+
+# Check the prediction for 109 (the first value)
+is_outlier = predictions[0] == -1
+print("Is 109 an outlier?", is_outlier)
+
 
 
 -- Step 1: Create an anomaly detection model using the sum_of_sales column
