@@ -1,0 +1,94 @@
+-- Snowflake stored procedure to detect anomalies from multiple tables
+CREATE OR REPLACE PROCEDURE TEAM_DATA_ENG.VENKATA_R.RUN_ANOMALY_DETECTION_MULTI()
+RETURNS STRING
+LANGUAGE SQL
+AS
+$$
+DECLARE
+  table_name STRING;
+  table_list ARRAY;
+  i INT;
+BEGIN
+
+  -- List of source tables to process
+  LET table_list = ARRAY_CONSTRUCT('table1', 'table2');
+
+  -- Loop over each table name in the list
+  FOR i IN 0 .. ARRAY_SIZE(table_list) - 1 DO
+    LET table_name = table_list[i];
+
+    -- Step 1: Create raw dataset from current table
+    EXECUTE IMMEDIATE
+    'CREATE OR REPLACE TABLE TEAM_DATA_ENG.VENKATA_R.ANOMALY_DATASET AS
+     SELECT SUM(plays) AS sum_plays, DIS_QUARTER
+     FROM APM.PROCESSED.' || table_name || '
+     GROUP BY DIS_QUARTER
+     ORDER BY DIS_QUARTER';
+
+    -- Step 2: Training dataset (80%)
+    EXECUTE IMMEDIATE
+    'CREATE OR REPLACE TABLE TEAM_DATA_ENG.VENKATA_R.ANOMALY_TRAINING AS
+     SELECT ''overall'' AS series_id,
+            TO_DATE(LEFT(DIS_QUARTER, 4) || ''-'' || 
+            CASE RIGHT(DIS_QUARTER, 1)
+              WHEN ''1'' THEN ''01''
+              WHEN ''2'' THEN ''04''
+              WHEN ''3'' THEN ''07''
+              WHEN ''4'' THEN ''10''
+            END || ''-01'') AS timestamp,
+            SUM_PLAYS
+     FROM (
+       SELECT *, ROW_NUMBER() OVER (ORDER BY DIS_QUARTER) AS row_num,
+              COUNT(*) OVER () AS total_rows
+       FROM TEAM_DATA_ENG.VENKATA_R.ANOMALY_DATASET
+     ) subquery
+     WHERE row_num <= CEIL(total_rows * 0.8)';
+
+    -- Step 3: Analysis dataset (20%)
+    EXECUTE IMMEDIATE
+    'CREATE OR REPLACE TABLE TEAM_DATA_ENG.VENKATA_R.ANOMALY_ANALYSIS AS
+     SELECT ''overall'' AS series_id,
+            TO_DATE(LEFT(DIS_QUARTER, 4) || ''-'' || 
+            CASE RIGHT(DIS_QUARTER, 1)
+              WHEN ''1'' THEN ''01''
+              WHEN ''2'' THEN ''04''
+              WHEN ''3'' THEN ''07''
+              WHEN ''4'' THEN ''10''
+            END || ''-01'') AS timestamp,
+            SUM_PLAYS
+     FROM (
+       SELECT *, ROW_NUMBER() OVER (ORDER BY DIS_QUARTER) AS row_num,
+              COUNT(*) OVER () AS total_rows
+       FROM TEAM_DATA_ENG.VENKATA_R.ANOMALY_DATASET
+     ) subquery
+     WHERE row_num > CEIL(total_rows * 0.8)';
+
+    -- Step 4: Create the anomaly detection model
+    EXECUTE IMMEDIATE
+    'CREATE OR REPLACE snowflake.ml.anomaly_detection TEAM_DATA_ENG.VENKATA_R.ANOMALY_MODEL (
+       INPUT_DATA => SYSTEM$REFERENCE(''TABLE'', ''TEAM_DATA_ENG.VENKATA_R.ANOMALY_TRAINING''),
+       SERIES_COLNAME => ''series_id'',
+       TIMESTAMP_COLNAME => ''timestamp'',
+       TARGET_COLNAME => ''sum_plays'',
+       LABEL_COLNAME => ''''
+     )';
+
+    -- Step 5: Run detection and store results
+    EXECUTE IMMEDIATE
+    'CREATE OR REPLACE TABLE TEAM_DATA_ENG.VENKATA_R.ANOMALY_RESULTS_' || table_name || ' AS
+     SELECT * FROM TABLE(
+       TEAM_DATA_ENG.VENKATA_R.ANOMALY_MODEL!DETECT_ANOMALIES(
+         INPUT_DATA => SYSTEM$REFERENCE(''TABLE'', ''TEAM_DATA_ENG.VENKATA_R.ANOMALY_ANALYSIS''),
+         SERIES_COLNAME => ''series_id'',
+         TIMESTAMP_COLNAME => ''timestamp'',
+         TARGET_COLNAME => ''sum_plays'',
+         CONFIG_OBJECT => {''prediction_interval'': 0.95}
+       )
+     )';
+
+  END FOR;
+
+  RETURN '✅ Anomaly detection completed for all tables.';
+
+END;
+$$;
