@@ -1,0 +1,67 @@
+from sklearn.ensemble import IsolationForest
+
+# Isolation Forest expects 2D array
+X = df[['sum_of_plays']]
+
+# Fit model
+iso_forest = IsolationForest(contamination=0.1, random_state=42)
+iso_forest.fit(X)
+
+# Predict (-1 = anomaly, 1 = normal)
+df['iso_pred'] = iso_forest.predict(X)
+
+# Check if latest quarter is anomaly
+latest = df.iloc[-1]
+is_anomaly = latest['iso_pred'] == -1
+
+print(f"Isolation Forest method - Latest quarter anomaly? {is_anomaly}")
+
+
+import numpy as np
+
+# Sort by time
+df = df.sort_values('quarter_dt')
+
+# Calculate rolling median and rolling MAD (Median Absolute Deviation)
+rolling_median = df['sum_of_plays'].rolling(window=4, min_periods=1).median()
+mad = df['sum_of_plays'].rolling(window=4, min_periods=1).apply(lambda x: np.median(np.abs(x - np.median(x))), raw=True)
+
+# Calculate anomaly score
+df['rolling_median'] = rolling_median
+df['mad'] = mad
+df['anomaly_score'] = np.abs(df['sum_of_plays'] - df['rolling_median']) / (df['mad'] + 1e-9)
+
+# Set threshold for anomaly detection
+threshold = 3  # common threshold
+
+# Check if latest quarter is anomaly
+latest = df.iloc[-1]
+is_anomaly = latest['anomaly_score'] > threshold
+
+print(f"Rolling Median method - Latest quarter anomaly? {is_anomaly}")
+
+
+
+
+from statsmodels.tsa.arima.model import ARIMA
+
+# ARIMA needs time index
+df_arima = df.set_index('quarter_dt')
+
+# Fit ARIMA model (order can be tuned)
+model = ARIMA(df_arima['sum_of_plays'], order=(1,1,1))
+model_fit = model.fit()
+
+# Forecast next value
+forecast = model_fit.forecast(steps=1)[0]
+
+# Calculate error
+actual = df_arima['sum_of_plays'].iloc[-1]
+error = np.abs(actual - forecast)
+
+# Set simple threshold (say 20% of forecast value)
+threshold = 0.2 * forecast
+
+is_anomaly = error > threshold
+
+print(f"ARIMA Forecasting method - Latest quarter anomaly? {is_anomaly}")
