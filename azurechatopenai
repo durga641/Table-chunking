@@ -1,21 +1,50 @@
-from langchain_openai import AzureChatOpenAI
+from langchain.chat_models import AzureChatOpenAI
+from langchain.schema.messages import HumanMessage
+from openai import AzureOpenAI
+import os
 
-# Set your API key and endpoint
-api_key = 'your-api-key-here'
-api_base = 'https://your-endpoint-here.openai.azure.com/'  # Your Azure OpenAI endpoint
-engine = 'gpt-4'  # or the specific model name you are using
+class OktaAzureChatOpenAI(AzureChatOpenAI):
+    def __init__(
+        self,
+        okta_token: str,
+        openai_api_base: str,
+        openai_api_version: str,
+        deployment_name: str,
+        temperature: float = 0.7,
+    ):
+        # Set dummy API key (required by SDK but ignored by your proxy)
+        os.environ["OPENAI_API_KEY"] = "dummy"
 
-# Initialize the AzureChatOpenAI client
-azure_chat = AzureChatOpenAI(api_key=api_key, api_base=api_base, engine=engine)
+        super().__init__(
+            openai_api_base=openai_api_base,
+            openai_api_version=openai_api_version,
+            deployment_name=deployment_name,
+            temperature=temperature,
+        )
 
-# Create a simple chat-based prompt
-messages = [
-    {"role": "system", "content": "You are a helpful assistant."},
-    {"role": "user", "content": "What are the benefits of using Azure OpenAI Service?"}
-]
+        # Use Okta token in headers for proxy auth
+        self.client = AzureOpenAI(
+            api_type="azure",
+            api_version=openai_api_version,
+            azure_endpoint=openai_api_base,
+            api_key="dummy",
+            default_headers={
+                "Authorization": f"Bearer {okta_token}"
+            },
+        )
 
-# Make a request to the OpenAI API for a chat completion
-response = azure_chat.chat(messages=messages, max_tokens=100)
+# ----- Usage Example -----
 
-# Print the response
-print(response['choices'][0]['message']['content'].strip())
+chat_model = OktaAzureChatOpenAI(
+    okta_token="<your_okta_token>",  # Replace with actual token
+    openai_api_base="https://your-proxy-endpoint",  # Your proxy URL
+    openai_api_version="2023-05-15",  # Azure API version
+    deployment_name="your-deployment-name",         # Azure deployment name
+    temperature=0.7
+)
+
+response = chat_model([
+    HumanMessage(content="Explain how Okta works with OpenAI through a proxy.")
+])
+
+print(response.content)
