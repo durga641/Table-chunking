@@ -1,7 +1,5 @@
 from langchain.chat_models import AzureChatOpenAI
 from langchain.schema.messages import HumanMessage
-from openai import AzureOpenAI
-import os
 
 class OktaAzureChatOpenAI(AzureChatOpenAI):
     def __init__(
@@ -12,39 +10,32 @@ class OktaAzureChatOpenAI(AzureChatOpenAI):
         deployment_name: str,
         temperature: float = 0.7,
     ):
-        # Set dummy API key (required by SDK but ignored by your proxy)
-        os.environ["OPENAI_API_KEY"] = "dummy"
-
         super().__init__(
             openai_api_base=openai_api_base,
             openai_api_version=openai_api_version,
             deployment_name=deployment_name,
             temperature=temperature,
-        )
-
-        # Use Okta token in headers for proxy auth
-        self.client = AzureOpenAI(
-            api_type="azure",
-            api_version=openai_api_version,
-            azure_endpoint=openai_api_base,
-            api_key="dummy",
-            default_headers={
-                "Authorization": f"Bearer {okta_token}"
-            },
+            openai_api_key="dummy",  # Required by LangChain, ignored by your proxy
+            openai_api_type="azure",
+            openai_request_kwargs={
+                "headers": {
+                    "Authorization": f"Bearer {okta_token}"
+                }
+            }
         )
 
 # ----- Usage Example -----
 
 chat_model = OktaAzureChatOpenAI(
-    okta_token="<your_okta_token>",  # Replace with actual token
-    openai_api_base="https://your-proxy-endpoint",  # Your proxy URL
-    openai_api_version="2023-05-15",  # Azure API version
-    deployment_name="your-deployment-name",         # Azure deployment name
+    okta_token="<your_okta_token>",                    # Replace with real Okta token
+    openai_api_base="https://your-proxy-endpoint",     # Your proxy that talks to Azure OpenAI
+    openai_api_version="2023-05-15",                   # Use the API version from Azure portal
+    deployment_name="your-deployment-name",            # Your Azure OpenAI deployment name
     temperature=0.7
 )
 
 response = chat_model([
-    HumanMessage(content="Explain how Okta works with OpenAI through a proxy.")
+    HumanMessage(content="How do I secure OpenAI with Okta?")
 ])
 
 print(response.content)
