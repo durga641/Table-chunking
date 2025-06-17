@@ -1,34 +1,33 @@
-# Program to print even numbers from 0 to 20
+image: python:3.9
 
-for number in range(21):  # Loop from 0 to 20
-    if number % 2 == 0:  # Check if the number is even
-        print(number)import openai
-from langchain.llms import OpenAI
+pipelines:
+  custom:
+    manual-deploy-dev:
+      - step:
+          name: Manual Deploy to Dev
+          script:
+            # Install GPG, git, Python tools
+            - apt-get update && apt-get install -y gnupg git python3-pip
 
-# Set up your OpenAI API key
-openai.api_key = 'your-api-key'
+            # Upgrade pip and install required Python libs
+            - pip install --upgrade pip
+            - pip install snowflake-connector-python cryptography pyyaml
 
-# Define your task and input text
-task_description = "Please summarize the following text:"
-input_text = "Your long input text here that you want summarized."
+            # Prepare GPG home directory
+            - mkdir -p ~/.gnupg
+            - chmod 700 ~/.gnupg
 
-# Combine task description and input text
-prompt = f"{task_description}\n\n{input_text}"
+            # Optional: Configure GPG to use loopback for passphrase input
+            - echo "use-agent" >> ~/.gnupg/gpg.conf
+            - echo "pinentry-mode loopback" >> ~/.gnupg/gpg.conf
 
-# Initialize the OpenAI LLM
-llm = OpenAI(api_key='your-api-key')
+            # Import base64-encoded private key stored as Bitbucket secret variable
+            - echo "$GPG_PRIVATE_KEY" | base64 --decode | gpg --batch --yes --import
 
-# Create the LangChain request
-response = llm(prompt)
+            # Decrypt the Snowflake private key file using the passphrase
+            - gpg --batch --yes --passphrase "$GPG_PASSPHRASE" \
+                --output /tmp/snowflake_private_key.p8 \
+                --decrypt serv_source_dev_rsa_key_encr.p8.secret
 
-# Print the result
-print(response)
-
-WITH cte AS (
-    SELECT *, ROW_NUMBER() OVER (PARTITION BY id ORDER BY id) AS row_num
-    FROM employees
-)
-UPDATE employees
-SET salary = 85000
-WHERE id = 101
-  AND EXISTS (SELECT 1 FROM cte WHERE employees.id = cte.id AND cte.row_num = 1);
+            # Run your SQL script using the decrypted key
+            - python execute_sql.py
