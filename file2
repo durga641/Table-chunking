@@ -1,33 +1,30 @@
-image: python:3.9
+# List all existing private and public GPG keys
+gpg --list-secret-keys --keyid-format LONG
+gpg --list-keys --keyid-format LONG
 
-pipelines:
-  custom:
-    manual-deploy-dev:
-      - step:
-          name: Manual Deploy to Dev
-          script:
-            # Install GPG, git, Python tools
-            - apt-get update && apt-get install -y gnupg git python3-pip
+# Display details of a specific secret key (replace KEY_ID with actual key id from above)
+gpg --armor --export-secret-keys KEY_ID
 
-            # Upgrade pip and install required Python libs
-            - pip install --upgrade pip
-            - pip install snowflake-connector-python cryptography pyyaml
+# Display public key associated with a specific ID
+gpg --armor --export KEY_ID
 
-            # Prepare GPG home directory
-            - mkdir -p ~/.gnupg
-            - chmod 700 ~/.gnupg
+# Show all key IDs stored in the .gitsecret/keys folder (associated with .secret files)
+git secret whoknows
 
-            # Optional: Configure GPG to use loopback for passphrase input
-            - echo "use-agent" >> ~/.gnupg/gpg.conf
-            - echo "pinentry-mode loopback" >> ~/.gnupg/gpg.conf
+# View the contents of a .secret file (requires access and key)
+git secret reveal -f  # Only works if you're a trusted key holder
 
-            # Import base64-encoded private key stored as Bitbucket secret variable
-            - echo "$GPG_PRIVATE_KEY" | base64 --decode | gpg --batch --yes --import
+# To identify the key used to encrypt the .secret files (extract from file headers)
+gpg --list-packets path/to/file.secret
 
-            # Decrypt the Snowflake private key file using the passphrase
-            - gpg --batch --yes --passphrase "$GPG_PASSPHRASE" \
-                --output /tmp/snowflake_private_key.p8 \
-                --decrypt serv_source_dev_rsa_key_encr.p8.secret
+# Delete a GPG public key (replace KEY_ID)
+gpg --delete-key KEY_ID
 
-            # Run your SQL script using the decrypted key
-            - python execute_sql.py
+# Delete a GPG private key
+gpg --delete-secret-key KEY_ID
+
+# Optional: Remove git-secret setup if needed
+rm -rf .gitsecret
+
+# Optional: Remove GPG config and keyring (dangerous – deletes all keys)
+# rm -rf ~/.gnupg
