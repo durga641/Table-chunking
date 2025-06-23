@@ -1,0 +1,18 @@
+from langchain.chat_models import AzureChatOpenAI
+from openai import AzureOpenAI
+import httpx
+
+# Custom HTTP client with SSL verification disabled
+http_client = httpx.Client(verify=False)
+
+# AzureChatOpenAI with custom HTTP client
+chat = AzureChatOpenAI(
+    api_key="your-azure-api-key",
+    api_version="2024-02-15-preview",  # Replace with your version
+    azure_endpoint="https://<your-resource-name>.openai.azure.com/",
+    deployment_name="<your-deployment-name>",
+    http_client=http_client
+)
+
+response = chat.invoke("Hello, how are you?")
+print(response.content)
