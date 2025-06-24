@@ -1,0 +1,20 @@
+Core Requirements:
+Enables automated deployment of Snowflake database changes using Bitbucket Pipelines
+
+Developers push SQL changes (DDL/DML) to the Bitbucket repository
+
+When a feature branch is merged into main, the pipeline is triggered
+
+The pipeline allows one-click deployment of changes:
+
+First to the QA environment
+
+Then optionally to Production
+
+🛠️ Additional Functionality (One-Time Setup):
+Capability to extract DDL for all database objects from an existing Snowflake database
+
+Used for initial setup or reverse-engineering before Bitbucket integration is in place
+
+Not part of the live CI/CD workflow but a helpful pre-integration utility
+
