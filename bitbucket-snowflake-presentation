@@ -18,6 +18,12 @@ Used for initial setup or reverse-engineering before Bitbucket integration is in
 
 Not part of the live CI/CD workflow but a helpful pre-integration utility
 
+
+------------------+      Push Code      +--------------------+     Trigger Pipeline     +------------------+
+|  Developer       | -----------------> |  Bitbucket Repo     | ----------------------> |   Bitbucket CI/CD |
++------------------+                    +--------------------+                          +------------------+
+                
+
           Developer Generates Keys
                    |
                    v
