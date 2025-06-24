@@ -18,3 +18,33 @@ Used for initial setup or reverse-engineering before Bitbucket integration is in
 
 Not part of the live CI/CD workflow but a helpful pre-integration utility
 
+          Developer Generates Keys
+                   |
+                   v
+       +------------------------+
+       | Public/Private Keypair |
+       +------------------------+
+                   |
+                   v
++-------------------------------------------+
+| Encrypt Snowflake Private Key using GPG   |
+| → Output: .secret file                    |
++-------------------------------------------+
+                   |
+                   v
+       +---------------------------+
+       | Store .secret in Bitbucket|
+       +---------------------------+
+
+During CI/CD Pipeline Runtime:
+--------------------------------
++---------------------------+       +--------------------------+
+| Read .secret file         | <---> | Use env vars for         |
+|                           |       | GPG passphrase & keys    |
++---------------------------+       +--------------------------+
+                   |
+                   v
+     +----------------------------+
+     | Decrypt and use Snowflake |
+     | key for DB object changes |
+     +----------------------------+
